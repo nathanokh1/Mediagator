@@ -1,0 +1,53 @@
+---
+description: Software development lifecycle standards for MediaMitigator
+globs: ["**/*.py", "**/*.md"]
+alwaysApply: true
+---
+
+# Development Lifecycle Standards
+
+## Code Documentation
+- Every module must have a top-level docstring describing its purpose, author, and last modified date
+- Every class must have a docstring explaining its responsibility
+- Every function/method must have a Google-style docstring with Args, Returns, and Raises sections
+- Inline comments required for any logic block longer than 5 lines
+- Complex algorithms must include a plain-English explanation comment above the block
+
+## File Header Template
+Every .py file must begin with:
+```python
+"""
+Module: <module_name>
+Purpose: <one line description>
+Author: Nathan
+Created: <date>
+Last Modified: <date>
+
+Description:
+    <multi-line detailed description of what this module does>
+"""
+```
+
+## Structure Rules
+- No function longer than 50 lines — refactor into helpers if exceeded
+- No file longer than 400 lines — split into submodules if exceeded
+- Group imports: stdlib → third-party → local, separated by blank lines
+- Constants defined in config/constants.py, never hardcoded inline
+- All user-facing strings defined in config/constants.py as STRING constants (for future i18n support)
+
+## Testing
+- Every core/ module must have a corresponding test file in tests/
+- Tests must cover: happy path, empty input, error/exception cases
+- Use pytest fixtures for reusable test data
+- Run tests before every GitHub push
+
+## Changelog
+- Maintain a CHANGELOG.md at root level
+- Format: [version] - [date] - [Added / Changed / Fixed / Removed]
+- Update on every meaningful feature addition or bug fix
+
+## Error Handling
+- Never use bare except: clauses — always catch specific exceptions
+- All caught exceptions must be logged via the app logger
+- User-facing errors must show human-readable messages, not tracebacks
+- Critical errors (file system failures) must write to logs/ immediately
