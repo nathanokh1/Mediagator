@@ -254,7 +254,7 @@ class ReportStep(QWidget):
     def _open_in_browser(self) -> None:
         """Open the saved HTML report in the system default browser."""
         if self._report_path and self._report_path.exists():
-            webbrowser.open(self._report_path.as_uri())
+            webbrowser.open(self._report_path.resolve().as_uri())
 
     def _open_destination(self) -> None:
         """Open the destination root in Windows Explorer."""
