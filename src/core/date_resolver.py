@@ -16,6 +16,7 @@ Author: Nathan
 import logging
 import os
 import random
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -24,6 +25,29 @@ from src.utils.exif_reader import get_media_date
 from src.utils.date_utils import majority_year_month
 
 logger = logging.getLogger(__name__)
+
+# Matches a plausible photo-era 4-digit year anywhere in a folder name.
+# Range 1970–2035 avoids false matches on things like "1080p" or "4096".
+_YEAR_RE = re.compile(r"(?<!\d)(19[7-9]\d|20[0-2]\d|2030|2031|2032|2033|2034|2035)(?!\d)")
+
+
+def _year_from_folder_name(name: str) -> int | None:
+    """Extract a plausible capture year directly from the folder name.
+
+    Examples that match:
+        "2022 Summer Vacation" → 2022
+        "RAW_2019_Yosemite"    → 2019
+        "SF 1.17.16"           → None  (no 4-digit year)
+        "1080p_timelapse"      → None  (year range guard)
+
+    Args:
+        name: Folder base name (not full path).
+
+    Returns:
+        Integer year, or ``None`` if no plausible year found.
+    """
+    m = _YEAR_RE.search(name)
+    return int(m.group()) if m else None
 
 
 def resolve_file_date(path: Path) -> datetime | None:
@@ -44,12 +68,18 @@ _SAMPLE_MIN   = 10     # always read at least this many
 _SAMPLE_MAX   = 500    # cap so huge folders don't stall the probe
 
 
-def _fast_file_date(path: Path) -> datetime | None:
-    """Read a capture date as quickly as possible.
+_THIS_YEAR = datetime.now().year
 
-    Order of attempts (fastest to slowest):
-    1. piexif header read (image files only, no image decode)
-    2. os.stat().st_ctime  (instant, but may be transfer date)
+
+def _fast_file_date(path: Path) -> datetime | None:
+    """Return a capture date estimate as quickly as possible.
+
+    Strategy (fastest first):
+    1. ``os.stat().st_mtime``  — one syscall, no file open.  Cameras set mtime
+       to the shutter time, so this is usually accurate for unedited files.
+    2. piexif header read      — only for image files when mtime looks like a
+       recent transfer (mtime year == current year AND file is > 1 year old by
+       size heuristic).  Avoids opening huge RAW files unnecessarily.
 
     Args:
         path: Media file path.
@@ -57,6 +87,19 @@ def _fast_file_date(path: Path) -> datetime | None:
     Returns:
         Best available :class:`datetime`, or ``None``.
     """
+    # Step 1: filesystem mtime — essentially free
+    try:
+        st = os.stat(str(path))
+        mtime = datetime.fromtimestamp(st.st_mtime)
+        # If mtime year is plausible (not the current year), trust it and skip EXIF.
+        # Current-year mtime often means the file was just copied.
+        if mtime.year < _THIS_YEAR:
+            return mtime
+        mtime_for_fallback = mtime
+    except Exception:
+        mtime_for_fallback = None
+
+    # Step 2: piexif — only reached if mtime looks like a transfer date
     ext = path.suffix.lower()
     if ext in IMAGE_EXTENSIONS:
         try:
@@ -74,10 +117,8 @@ def _fast_file_date(path: Path) -> datetime | None:
                         return dt
         except Exception:
             pass
-    try:
-        return datetime.fromtimestamp(os.stat(str(path)).st_ctime)
-    except Exception:
-        return None
+
+    return mtime_for_fallback
 
 
 def resolve_folder_dates_fast(
@@ -102,7 +143,35 @@ def resolve_folder_dates_fast(
     Returns:
         ``(majority_year, majority_month, is_multi_year)`` tuple.
     """
-    candidates: list[str] = []
+    # ── Tier 1: folder name  (zero I/O, instant) ─────────────────────
+    year = _year_from_folder_name(folder.name)
+    if year:
+        # We have a confident year from the name.  Still sample a few files
+        # to determine the majority MONTH, but skip full EXIF reads.
+        candidates: list[str] = []
+        try:
+            with os.scandir(str(folder)) as it:
+                for entry in it:
+                    if entry.is_file(follow_symlinks=False):
+                        if os.path.splitext(entry.name)[1].lower() in MEDIA_EXTENSIONS:
+                            candidates.append(entry.path)
+        except Exception:
+            pass
+
+        # Sample fewer files since the year is already known
+        month_sample = random.sample(candidates, min(20, len(candidates)))
+        dates: list[datetime] = []
+        for p in month_sample:
+            dt = _fast_file_date(Path(p))
+            if dt:
+                dates.append(dt)
+
+        _, month, multi_year = majority_year_month(dates)
+        logger.debug("Probe (name): %s → year=%d month=%s", folder.name, year, month)
+        return year, month, False
+
+    # ── Tier 2: file mtime / piexif sample (normal path) ─────────────
+    candidates = []
     try:
         with os.scandir(str(folder)) as it:
             for entry in it:
@@ -122,14 +191,14 @@ def resolve_folder_dates_fast(
     sample_size = int(max(_SAMPLE_MIN, min(_SAMPLE_MAX, n * _SAMPLE_PCT)))
     sample = random.sample(candidates, min(sample_size, n))
 
-    dates: list[datetime] = []
+    dates = []
     for path_str in sample:
         dt = _fast_file_date(Path(path_str))
         if dt:
             dates.append(dt)
 
     logger.debug(
-        "Probe sample: %s — %d / %d files read (%.0f%%)",
+        "Probe (files): %s — %d / %d sampled (%.0f%%)",
         folder.name, len(sample), n, 100 * len(sample) / max(n, 1),
     )
     return majority_year_month(dates)

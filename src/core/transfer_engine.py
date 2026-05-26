@@ -101,6 +101,8 @@ class TransferWorker(QThread):
         self._stats = TransferStats(
             files_remaining=plan.total_files,
         )
+        self._last_progress_emit = 0.0
+        self._progress_lock = threading.Lock()  # guards rate-limit timestamp across workers
 
     def run(self) -> None:
         """Execute all phases sequentially."""
@@ -120,9 +122,14 @@ class TransferWorker(QThread):
         self.transfer_complete.emit(self._stats)
 
     # Number of folders processed concurrently within a phase.
-    # 2 workers lets one thread read from the source while another writes
-    # to the destination, hiding I/O latency without thrashing an HDD.
-    _FOLDER_WORKERS = 2
+    # 3 workers: source-read, in-flight copy, and destination-write can all
+    # overlap.  Good balance for HDD→SSD transfers without thrashing the source.
+    _FOLDER_WORKERS = 3
+
+    # Minimum seconds between GUI progress_updated signals.
+    # Firing once per file at 7000 files/run = 7000 signal dispatches;
+    # throttling to 100 ms intervals cuts that to ~60 updates/minute.
+    _PROGRESS_INTERVAL = 0.1
 
     def _execute_phase(self, phase: TransferPhase, start_time: float) -> None:
         """Transfer all folders in a single phase using parallel folder workers.
@@ -214,7 +221,17 @@ class TransferWorker(QThread):
                 )
                 dup_dest.parent.mkdir(parents=True, exist_ok=True)
                 if safe_copy(src, dup_dest):
-                    safe_delete(src)
+                    deleted = safe_delete(src)
+                    if not deleted:
+                        ts = time.strftime("%H:%M:%S")
+                        self._stats.flagged_items.append(
+                            (ts, src, "DELETE_FAILED", "SOURCE_KEPT")
+                        )
+                        log_operation(
+                            self._transfer_logger, logging.WARNING,
+                            "DUPLICATE", src, dup_dest, src.stat().st_size,
+                            "COPY_OK_DELETE_FAILED", "source may be read-only",
+                        )
                     self._stats.duplicates.append(src)
                     self._stats.files_completed += 1
                     self._stats.files_remaining -= 1
@@ -235,19 +252,32 @@ class TransferWorker(QThread):
                 "RENAME", src, dest, src.stat().st_size, "RENAMED", "",
             )
 
-        self.progress_updated.emit(done, total, float(self._stats.bytes_transferred), 0.0, str(src), str(dest))
-
         size = src.stat().st_size
         if safe_copy(src, dest):
-            safe_delete(src)
+            deleted = safe_delete(src)
             self._stats.files_completed += 1
             self._stats.files_remaining -= 1
             self._stats.bytes_transferred += size
-            log_operation(
-                self._transfer_logger, logging.INFO,
-                "COPY", src, dest, size, "SUCCESS",
-            )
-            self.item_completed.emit(str(src), str(dest), "SUCCESS")
+
+            if deleted:
+                log_operation(
+                    self._transfer_logger, logging.INFO,
+                    "MOVE", src, dest, size, "SUCCESS",
+                )
+                self.item_completed.emit(str(src), str(dest), "SUCCESS")
+            else:
+                # Copy succeeded but source could not be removed.
+                # Log and flag so the report lists these files.
+                ts = time.strftime("%H:%M:%S")
+                self._stats.errors.append((src, "Copied but source not deleted — check read-only attribute"))
+                self._stats.flagged_items.append((ts, src, "DELETE_FAILED", "SOURCE_KEPT"))
+                log_operation(
+                    self._transfer_logger, logging.WARNING,
+                    "MOVE", src, dest, size, "COPY_OK_DELETE_FAILED",
+                    "file may be read-only or locked",
+                )
+                self.error_occurred.emit(ts, str(src), "Copied OK but source not deleted")
+                self.item_completed.emit(str(src), str(dest), "SUCCESS")
         else:
             ts = time.strftime("%H:%M:%S")
             self._stats.errors.append((src, "Copy/verify failed"))
@@ -261,16 +291,27 @@ class TransferWorker(QThread):
         self._emit_progress(src, dest, start_time)
 
     def _emit_progress(self, src: Path, dest: Path, start_time: float) -> None:
-        """Compute current speed and emit a progress update signal.
+        """Compute current speed and emit a rate-limited progress update signal.
+
+        Signals are throttled to at most one every ``_PROGRESS_INTERVAL`` seconds
+        so thousands of small files don't flood the GUI event queue.  Stats are
+        always updated even when the signal is suppressed.
 
         Args:
             src: Source file for label display.
             dest: Destination file for label display.
             start_time: Monotonic transfer start time.
         """
-        elapsed = max(time.monotonic() - start_time, 0.001)
+        now = time.monotonic()
+        elapsed = max(now - start_time, 0.001)
         speed_mbs = (self._stats.bytes_transferred / (1024 * 1024)) / elapsed
         self._stats.current_speed_mbs = speed_mbs
+
+        with self._progress_lock:
+            if now - self._last_progress_emit < self._PROGRESS_INTERVAL:
+                return
+            self._last_progress_emit = now
+
         self.progress_updated.emit(
             self._stats.files_completed,
             self._plan.total_files,

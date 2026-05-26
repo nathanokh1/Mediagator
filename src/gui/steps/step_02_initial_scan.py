@@ -175,10 +175,26 @@ class InitialScanStep(QWidget):
     # ------------------------------------------------------------------
 
     def refresh(self) -> None:
-        """Show cached results instantly, or start a new scan if none exist."""
-        if self._state.scan_result is not None:
+        """Show cached results, or rescan if selection changed or no results exist.
+
+        If the user went back to Step 1 and changed which folders or file types
+        are selected, the cached results are stale — trigger a fresh scan
+        automatically.  Otherwise show the cached dashboard instantly.
+        """
+        current_key = (
+            frozenset(self._state.selected_scan_folders),
+            frozenset(self._state.selected_extensions),
+        )
+        cached_key = getattr(self._state, "_last_scan_key", None)
+
+        if self._state.scan_result is not None and cached_key == current_key:
             self._show_cached_results()
             return
+
+        if self._state.scan_result is not None and cached_key != current_key:
+            # Selection changed — inform the user briefly before starting
+            self._title.setText("Selection changed — starting new scan…")
+
         self._start_scan()
 
     def _show_cached_results(self) -> None:
@@ -230,6 +246,11 @@ class InitialScanStep(QWidget):
         self._worker.scan_complete.connect(self._on_scan_complete)
         self._worker.error_occurred.connect(self._on_error)
         self._worker.start()
+        # Record the exact selection used for this scan so refresh() can detect changes
+        self._state._last_scan_key = (
+            frozenset(scan_folders),
+            frozenset(extensions or []),
+        )
         logger.info(
             "Scan started: %d folders, %d extensions",
             len(scan_folders),

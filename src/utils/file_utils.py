@@ -52,7 +52,11 @@ def safe_copy(source: Path, destination: Path) -> bool:
 
 
 def safe_delete(path: Path) -> bool:
-    """Delete a file safely, logging any errors.
+    """Delete a file safely, handling Windows read-only attributes.
+
+    On Windows, camera software and some copy tools mark files as read-only
+    (the Archive+ReadOnly NTFS attribute).  ``Path.unlink()`` raises
+    ``PermissionError`` on read-only files, so we clear the attribute first.
 
     Args:
         path: Path to the file to delete.
@@ -61,7 +65,17 @@ def safe_delete(path: Path) -> bool:
         ``True`` if the file was deleted or did not exist, ``False`` on error.
     """
     try:
-        path.unlink(missing_ok=True)
+        if not path.exists():
+            return True
+        try:
+            # Clear read-only attribute if set (Windows-specific, no-op elsewhere)
+            import stat as _stat
+            current_mode = path.stat().st_mode
+            if not (current_mode & _stat.S_IWRITE):
+                path.chmod(current_mode | _stat.S_IWRITE)
+        except Exception:
+            pass  # If chmod fails, attempt unlink anyway
+        path.unlink()
         return True
     except Exception as exc:
         logger.error("Delete failed %s: %s", path, exc)
