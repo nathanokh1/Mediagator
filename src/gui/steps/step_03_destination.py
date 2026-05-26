@@ -21,7 +21,6 @@ from pathlib import Path
 
 import psutil
 from PyQt6.QtCore import pyqtSignal, QThread, pyqtSlot, Qt
-from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFileDialog, QGroupBox, QProgressBar, QButtonGroup,
@@ -196,24 +195,17 @@ class DriveInfoWorker(QThread):
 # ---------------------------------------------------------------------------
 
 class _DriveCard(QFrame):
-    """Clickable card showing one drive's type, capacity, and free space."""
-
-    clicked = pyqtSignal(Path)
+    """Informational card showing one drive's type, capacity, and free space."""
 
     def __init__(self, data: _DriveData, needed_bytes: int, parent=None) -> None:
         super().__init__(parent)
-        self._root = data.root
         self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.setFixedWidth(200)
+        self.setFixedWidth(185)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         has_space = data.free_gb * (1024 ** 3) >= needed_bytes
-        border_col = "#3a3a5a"
         self.setStyleSheet(
-            f"QFrame {{ background: #2a2a3e; border: 1px solid {border_col}; "
-            f"border-radius: 10px; }} "
-            f"QFrame:hover {{ background: #35354f; border: 1px solid #ff9800; }}"
+            "QFrame { background: #2a2a3e; border: 1px solid #3a3a5a; border-radius: 10px; }"
         )
 
         lay = QVBoxLayout(self)
@@ -274,9 +266,6 @@ class _DriveCard(QFrame):
                 ok_lbl.setStyleSheet("color: #f44336; font-size: 10px; border: none;")
             lay.addWidget(ok_lbl)
 
-    def mousePressEvent(self, event) -> None:
-        self.clicked.emit(self._root)
-        super().mousePressEvent(event)
 
 
 # ---------------------------------------------------------------------------
@@ -338,10 +327,19 @@ class DestinationStep(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setFixedHeight(178)
-        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        scroll.setFixedHeight(190)
+        scroll.setStyleSheet("""
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:horizontal {
+                height: 8px; background: #1a1a2e; border-radius: 4px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #444466; border-radius: 4px; min-width: 30px;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+        """)
 
         self._cards_container = QWidget()
         self._cards_layout = QHBoxLayout(self._cards_container)
@@ -609,8 +607,6 @@ class DestinationStep(QWidget):
         shown = 0
         for d in sorted_drives:
             card = _DriveCard(d, needed)
-            card.clicked.connect(self._set_destination)
-            # Insert before the trailing stretch
             self._cards_layout.insertWidget(self._cards_layout.count() - 1, card)
             shown += 1
 
