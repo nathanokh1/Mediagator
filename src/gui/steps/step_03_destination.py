@@ -16,20 +16,22 @@ Author: Nathan
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from pathlib import Path
 
 import psutil
 from PyQt6.QtCore import pyqtSignal, QThread, pyqtSlot, Qt
+from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFileDialog, QGroupBox, QProgressBar, QButtonGroup,
-    QRadioButton, QFrame,
+    QRadioButton, QFrame, QScrollArea, QSizePolicy,
 )
 
 from src.gui.wizard_state import WizardState
 from src.config.constants import OrgMode, ORG_MODE_LABELS
 from src.utils.file_utils import human_readable_size
-from src.core.hardware_profile import detect_hardware, HardwareProfile
+from src.core.hardware_profile import detect_hardware, HardwareProfile, _get_drive_type
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,159 @@ class ProbeWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
+# Drive discovery
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _DriveData:
+    """Detected info for one mounted drive."""
+    root:       Path
+    label:      str
+    drive_type: str   # SSD / HDD / Unknown
+    total_gb:   float
+    free_gb:    float
+    used_pct:   float
+
+
+class DriveInfoWorker(QThread):
+    """Enumerate all fixed drives and detect their type + free space.
+
+    Signals:
+        drives_ready(list): List of :class:`_DriveData` objects.
+    """
+
+    drives_ready = pyqtSignal(list)
+
+    def run(self) -> None:
+        results: list[_DriveData] = []
+        try:
+            for part in psutil.disk_partitions(all=False):
+                # Skip optical / ram drives
+                if "cdrom" in part.opts or part.fstype == "":
+                    continue
+                root = Path(part.mountpoint)
+                try:
+                    usage = psutil.disk_usage(str(root))
+                except PermissionError:
+                    continue
+                total_gb = usage.total / (1024 ** 3)
+                free_gb  = usage.free  / (1024 ** 3)
+                used_pct = usage.percent
+
+                # Drive label from Windows (e.g. "Local Disk (C:)")
+                try:
+                    import subprocess, json
+                    ps = (
+                        f"$d = Get-PSDrive -Name '{root.drive[0]}' -ErrorAction SilentlyContinue;"
+                        f"if ($d) {{ $d.Description }} else {{ '' }}"
+                    )
+                    r = subprocess.run(
+                        ["powershell", "-NoProfile", "-Command", ps],
+                        capture_output=True, text=True, timeout=4
+                    )
+                    label = r.stdout.strip() or root.drive
+                except Exception:
+                    label = root.drive
+
+                drive_type = _get_drive_type(root)
+                results.append(_DriveData(
+                    root=root, label=label, drive_type=drive_type,
+                    total_gb=total_gb, free_gb=free_gb, used_pct=used_pct,
+                ))
+        except Exception as exc:
+            logger.debug("DriveInfoWorker error: %s", exc)
+        self.drives_ready.emit(results)
+
+
+# ---------------------------------------------------------------------------
+# Drive card widget
+# ---------------------------------------------------------------------------
+
+class _DriveCard(QFrame):
+    """Clickable card showing one drive's type, capacity, and free space."""
+
+    clicked = pyqtSignal(Path)
+
+    def __init__(self, data: _DriveData, needed_bytes: int, parent=None) -> None:
+        super().__init__(parent)
+        self._root = data.root
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setFixedWidth(200)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        has_space = data.free_gb * (1024 ** 3) >= needed_bytes
+        border_col = "#3a3a5a"
+        self.setStyleSheet(
+            f"QFrame {{ background: #2a2a3e; border: 1px solid {border_col}; "
+            f"border-radius: 10px; }} "
+            f"QFrame:hover {{ background: #35354f; border: 1px solid #ff9800; }}"
+        )
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(14, 12, 14, 12)
+        lay.setSpacing(6)
+
+        # Drive root + type badge
+        top = QHBoxLayout()
+        root_lbl = QLabel(str(data.root.drive))
+        root_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #fff; border: none;")
+        top.addWidget(root_lbl)
+        top.addStretch()
+
+        type_colours = {"SSD": "#4caf50", "HDD": "#ff9800", "Unknown": "#666"}
+        tc = type_colours.get(data.drive_type, "#666")
+        type_lbl = QLabel(data.drive_type)
+        type_lbl.setStyleSheet(
+            f"color: {tc}; font-size: 10px; font-weight: bold; "
+            f"background: transparent; border: 1px solid {tc}; "
+            f"border-radius: 4px; padding: 1px 5px;"
+        )
+        top.addWidget(type_lbl)
+        lay.addLayout(top)
+
+        # Label / volume name
+        if data.label and data.label != str(data.root.drive):
+            name_lbl = QLabel(data.label)
+            name_lbl.setStyleSheet("color: #aaa; font-size: 10px; border: none;")
+            name_lbl.setWordWrap(True)
+            lay.addWidget(name_lbl)
+
+        # Mini usage bar
+        bar = QProgressBar()
+        bar.setRange(0, 100)
+        bar.setValue(int(data.used_pct))
+        bar.setTextVisible(False)
+        bar.setFixedHeight(6)
+        fill_colour = "#f44336" if data.used_pct > 85 else "#ff9800" if data.used_pct > 60 else "#4caf50"
+        bar.setStyleSheet(f"""
+            QProgressBar {{ background: #1a1a2e; border: none; border-radius: 3px; }}
+            QProgressBar::chunk {{ background: {fill_colour}; border-radius: 3px; }}
+        """)
+        lay.addWidget(bar)
+
+        # Capacity text
+        space_text = f"{data.free_gb:.1f} GB free / {data.total_gb:.1f} GB"
+        space_lbl = QLabel(space_text)
+        space_lbl.setStyleSheet("color: #888; font-size: 10px; border: none;")
+        lay.addWidget(space_lbl)
+
+        # Enough space indicator
+        if needed_bytes > 0:
+            if has_space:
+                ok_lbl = QLabel("✓ Enough space")
+                ok_lbl.setStyleSheet("color: #4caf50; font-size: 10px; border: none;")
+            else:
+                ok_lbl = QLabel("✗ Not enough space")
+                ok_lbl.setStyleSheet("color: #f44336; font-size: 10px; border: none;")
+            lay.addWidget(ok_lbl)
+
+    def mousePressEvent(self, event) -> None:
+        self.clicked.emit(self._root)
+        super().mousePressEvent(event)
+
+
+# ---------------------------------------------------------------------------
 # Step widget
 # ---------------------------------------------------------------------------
 
@@ -147,6 +302,8 @@ class DestinationStep(QWidget):
         self._state = state
         self._probe_worker: ProbeWorker | None = None
         self._hw_worker: HardwareWorker | None = None
+        self._drive_worker: DriveInfoWorker | None = None
+        self._detected_drives: list[_DriveData] = []
         self._build_ui()
 
     # ------------------------------------------------------------------
@@ -170,6 +327,30 @@ class DestinationStep(QWidget):
         subtitle.setWordWrap(True)
         subtitle.setStyleSheet("color: #aaa;")
         layout.addWidget(subtitle)
+
+        # ── Quick-select drive panel ───────────────────────────────────
+        drives_group = QGroupBox("Quick Select — Available Drives")
+        drives_outer = QVBoxLayout(drives_group)
+
+        self._drives_hint = QLabel("Scanning available drives…")
+        self._drives_hint.setStyleSheet("color: #888; font-size: 11px;")
+        drives_outer.addWidget(self._drives_hint)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFixedHeight(178)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        self._cards_container = QWidget()
+        self._cards_layout = QHBoxLayout(self._cards_container)
+        self._cards_layout.setContentsMargins(0, 4, 0, 4)
+        self._cards_layout.setSpacing(10)
+        self._cards_layout.addStretch()
+        scroll.setWidget(self._cards_container)
+        drives_outer.addWidget(scroll)
+        layout.addWidget(drives_group)
 
         # ── Folder picker ─────────────────────────────────────────────
         picker_group = QGroupBox("Destination Folder")
@@ -392,6 +573,55 @@ class DestinationStep(QWidget):
             profile.optimal_workers, profile.optimal_buffer_mb,
         )
 
+    def _start_drive_scan(self) -> None:
+        """Enumerate all drives in the background and populate the cards panel."""
+        self._drive_worker = DriveInfoWorker()
+        self._drive_worker.drives_ready.connect(self._on_drives_ready)
+        self._drive_worker.start()
+
+    @pyqtSlot(list)
+    def _on_drives_ready(self, drives: list) -> None:
+        """Rebuild the drive card row from detected drives."""
+        self._detected_drives = drives
+
+        # Clear existing cards (keep trailing stretch)
+        while self._cards_layout.count() > 1:
+            item = self._cards_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        needed = (
+            self._state.scan_result.total_size_bytes
+            if self._state.scan_result else 0
+        )
+
+        # Sort: enough space first, then by free space descending
+        sorted_drives = sorted(
+            drives,
+            key=lambda d: (d.free_gb * (1024 ** 3) < needed, -d.free_gb),
+        )
+
+        # Exclude drives that are pure source drives
+        source_roots = {
+            Path(p.drive + "\\") for p in self._state.selected_scan_folders
+        }
+
+        shown = 0
+        for d in sorted_drives:
+            card = _DriveCard(d, needed)
+            card.clicked.connect(self._set_destination)
+            # Insert before the trailing stretch
+            self._cards_layout.insertWidget(self._cards_layout.count() - 1, card)
+            shown += 1
+
+        if shown == 0:
+            self._drives_hint.setText("No drives detected.")
+        else:
+            src_note = " (source drives shown for reference)" if source_roots else ""
+            self._drives_hint.setText(
+                f"{shown} drive(s) detected{src_note} — click one to select it as destination."
+            )
+
     def _update_space_label(self, path: Path) -> None:
         try:
             usage = psutil.disk_usage(str(path))
@@ -446,3 +676,5 @@ class DestinationStep(QWidget):
             self._update_space_label(self._state.destination_root)
         self._apply_initial_mode()
         self._refresh_preview()
+        # Always refresh drive cards so free-space indicators are current
+        self._start_drive_scan()
