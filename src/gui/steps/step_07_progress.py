@@ -21,6 +21,7 @@ from src.gui.wizard_state import WizardState
 from src.gui.widgets.progress_widget import ProgressWidget
 from src.gui.widgets.error_panel_widget import ErrorPanelWidget
 from src.core.transfer_engine import TransferWorker
+from src.core.hardware_profile import add_defender_exclusions, remove_defender_exclusions
 from src.utils.logger import get_transfer_logger
 from src.utils.notification import notify
 from src.config.settings import save_session, clear_session
@@ -51,6 +52,7 @@ class TransferProgressStep(QWidget):
         self._worker: TransferWorker | None = None
         self._cancel_event = threading.Event()
         self._start_time: float = 0.0
+        self._defender_paths: list = []   # paths added to Defender exclusions
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -100,6 +102,25 @@ class TransferProgressStep(QWidget):
             logger.error("No transfer plan — cannot start transfer.")
             return
 
+        # Attempt to add Defender exclusions for source + destination paths.
+        # This is fire-and-forget — if the app isn't admin it logs a warning and
+        # carries on.  The paths are stored so we can remove them afterwards.
+        self._defender_paths = []
+        scan_result = self._state.scan_result
+        if scan_result and self._state.selected_scan_folders:
+            # Collect unique drive roots from selected folders
+            roots = {p.anchor for p in self._state.selected_scan_folders if p.anchor}
+            self._defender_paths.extend(roots)
+        if self._state.destination_root:
+            self._defender_paths.append(self._state.destination_root)
+
+        if self._defender_paths:
+            added = add_defender_exclusions(self._defender_paths)
+            if added:
+                logger.info("Defender exclusions active for %d paths", len(self._defender_paths))
+            else:
+                logger.info("Defender exclusions not added (not admin or unavailable)")
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         transfer_logger = get_transfer_logger(ts)
 
@@ -112,6 +133,7 @@ class TransferProgressStep(QWidget):
             settings=self._state.settings,
             transfer_logger=transfer_logger,
             cancellation_event=self._cancel_event,
+            hardware_profile=self._state.hardware_profile,
         )
         self._worker.progress_updated.connect(self._on_progress)
         self._worker.error_occurred.connect(self._on_error)
@@ -182,6 +204,7 @@ class TransferProgressStep(QWidget):
         """
         self._state.transfer_stats = stats
         clear_session()
+        remove_defender_exclusions(self._defender_paths)
         notify(
             self._state.settings,
             "MediaMitigator — Transfer Complete",
@@ -195,6 +218,7 @@ class TransferProgressStep(QWidget):
         self._cancel_event.set()
         self._cancel_btn.setEnabled(False)
         self._cancel_btn.setText("Cancelling…")
+        remove_defender_exclusions(self._defender_paths)
         if self._state.transfer_plan:
             save_session({"cancelled": True})
         logger.info("Transfer cancelled by user.")

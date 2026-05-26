@@ -19,6 +19,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from src.config.constants import DUPLICATE_FOLDER_NAME, MEDIA_EXTENSIONS
 from src.core.duplicate_detector import is_duplicate
+from src.core.hardware_profile import HardwareProfile
 from src.models.folder_node import FolderNode, FolderStatus
 from src.models.transfer_plan import TransferPlan
 from src.models.transfer_phase import TransferPhase, PhaseStatus
@@ -84,6 +85,7 @@ class TransferWorker(QThread):
         settings: dict[str, Any],
         transfer_logger: logging.Logger,
         cancellation_event: threading.Event | None = None,
+        hardware_profile: HardwareProfile | None = None,
     ) -> None:
         """Initialise the transfer worker.
 
@@ -92,6 +94,7 @@ class TransferWorker(QThread):
             settings: User settings dict (empty_folder_behavior, etc.).
             transfer_logger: Per-session file logger.
             cancellation_event: Optional shared event for clean stop.
+            hardware_profile: Detected hardware config for adaptive settings.
         """
         super().__init__()
         self._plan = plan
@@ -102,7 +105,23 @@ class TransferWorker(QThread):
             files_remaining=plan.total_files,
         )
         self._last_progress_emit = 0.0
-        self._progress_lock = threading.Lock()  # guards rate-limit timestamp across workers
+        self._progress_lock = threading.Lock()
+
+        # Adaptive settings — use hardware profile if available, else defaults
+        if hardware_profile:
+            self._folder_workers = hardware_profile.optimal_workers
+            self._copy_buffer    = hardware_profile.optimal_buffer_mb * 1024 * 1024
+            logger.info(
+                "Transfer engine: using hardware-tuned settings — "
+                "workers=%d buffer=%dMB (src=%s dst=%s)",
+                self._folder_workers,
+                hardware_profile.optimal_buffer_mb,
+                hardware_profile.source_drive_type,
+                hardware_profile.dest_drive_type,
+            )
+        else:
+            self._folder_workers = self._FOLDER_WORKERS
+            self._copy_buffer    = 16 * 1024 * 1024  # 16 MB default
 
     def run(self) -> None:
         """Execute all phases sequentially."""
@@ -141,7 +160,7 @@ class TransferWorker(QThread):
             phase: The phase to execute.
             start_time: Monotonic start time for elapsed calculation.
         """
-        with ThreadPoolExecutor(max_workers=self._FOLDER_WORKERS) as pool:
+        with ThreadPoolExecutor(max_workers=self._folder_workers) as pool:
             futures = {
                 pool.submit(self._transfer_folder, node, start_time): node
                 for node in phase.folder_nodes
@@ -220,7 +239,7 @@ class TransferWorker(QThread):
                     / src.name
                 )
                 dup_dest.parent.mkdir(parents=True, exist_ok=True)
-                if safe_copy(src, dup_dest):
+                if safe_copy(src, dup_dest, buffer=self._copy_buffer):
                     deleted = safe_delete(src)
                     if not deleted:
                         ts = time.strftime("%H:%M:%S")
@@ -253,7 +272,7 @@ class TransferWorker(QThread):
             )
 
         size = src.stat().st_size
-        if safe_copy(src, dest):
+        if safe_copy(src, dest, buffer=self._copy_buffer):
             deleted = safe_delete(src)
             self._stats.files_completed += 1
             self._stats.files_remaining -= 1

@@ -18,16 +18,17 @@ logger = logging.getLogger(__name__)
 _COPY_BUFFER = 16 * 1024 * 1024
 
 
-def safe_copy(source: Path, destination: Path) -> bool:
-    """Copy a file with a large buffer and verify by size comparison.
+def safe_copy(source: Path, destination: Path, buffer: int = _COPY_BUFFER) -> bool:
+    """Copy a file with a configurable buffer and verify by size comparison.
 
-    Uses a 16 MB I/O buffer (vs ``shutil.copy2``'s ~16 KB default) to
-    maximise sequential throughput on HDDs and USB drives.  The destination
-    parent directory is created if it does not exist.
+    Uses a 16 MB I/O buffer by default (vs ``shutil.copy2``'s ~16 KB default)
+    to maximise sequential throughput on HDDs and USB drives.  Pass a larger
+    ``buffer`` value when RAM permits and SSD speeds demand it.
 
     Args:
         source: Absolute path to the source file.
         destination: Absolute path to the destination file.
+        buffer: Copy buffer size in bytes (default 16 MB).
 
     Returns:
         ``True`` if copy succeeded and sizes match, ``False`` otherwise.
@@ -36,9 +37,8 @@ def safe_copy(source: Path, destination: Path) -> bool:
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists():
             destination.unlink()
-        # Buffered copy preserves metadata timestamps (like shutil.copy2)
         with source.open("rb") as src_fh, destination.open("wb") as dst_fh:
-            shutil.copyfileobj(src_fh, dst_fh, length=_COPY_BUFFER)
+            shutil.copyfileobj(src_fh, dst_fh, length=buffer)
         shutil.copystat(str(source), str(destination))
         if destination.stat().st_size == source.stat().st_size:
             return True

@@ -19,23 +19,42 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import psutil
+from PyQt6.QtCore import pyqtSignal, QThread, pyqtSlot, Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFileDialog, QGroupBox, QProgressBar, QButtonGroup,
     QRadioButton, QFrame,
 )
-from PyQt6.QtCore import pyqtSignal, QThread, pyqtSlot, Qt
 
 from src.gui.wizard_state import WizardState
 from src.config.constants import OrgMode, ORG_MODE_LABELS
 from src.utils.file_utils import human_readable_size
+from src.core.hardware_profile import detect_hardware, HardwareProfile
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Background worker
+# Background workers
 # ---------------------------------------------------------------------------
+
+class HardwareWorker(QThread):
+    """Detect hardware profile in a background thread.
+
+    Signals:
+        hardware_ready(object): Emits the detected :class:`HardwareProfile`.
+    """
+
+    hardware_ready = pyqtSignal(object)
+
+    def __init__(self, source_path: Path, dest_path: Path) -> None:
+        super().__init__()
+        self._source = source_path
+        self._dest   = dest_path
+
+    def run(self) -> None:
+        profile = detect_hardware(self._source, self._dest)
+        self.hardware_ready.emit(profile)
 
 class ProbeWorker(QThread):
     """Resolves destination paths for all folder nodes in the background.
@@ -127,6 +146,7 @@ class DestinationStep(QWidget):
         super().__init__(parent)
         self._state = state
         self._probe_worker: ProbeWorker | None = None
+        self._hw_worker: HardwareWorker | None = None
         self._build_ui()
 
     # ------------------------------------------------------------------
@@ -353,6 +373,24 @@ class DestinationStep(QWidget):
         self._update_space_label(path)
         self._refresh_preview()
         self._start_probe()
+        self._start_hardware_detection(path)
+
+    def _start_hardware_detection(self, dest_path: Path) -> None:
+        """Kick off hardware detection in the background."""
+        source_roots = self._state.selected_scan_folders
+        source_hint = source_roots[0] if source_roots else dest_path
+        self._hw_worker = HardwareWorker(source_hint, dest_path)
+        self._hw_worker.hardware_ready.connect(self._on_hardware_ready)
+        self._hw_worker.start()
+
+    @pyqtSlot(object)
+    def _on_hardware_ready(self, profile: HardwareProfile) -> None:
+        self._state.hardware_profile = profile
+        logger.info(
+            "Hardware detected: src=%s dest=%s workers=%d buffer=%dMB",
+            profile.source_drive_type, profile.dest_drive_type,
+            profile.optimal_workers, profile.optimal_buffer_mb,
+        )
 
     def _update_space_label(self, path: Path) -> None:
         try:

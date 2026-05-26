@@ -113,6 +113,15 @@ class TransferSettingsStep(QWidget):
         lr_layout.addWidget(self._lr_cb)
         layout.addWidget(lr_group)
 
+        # 5. Hardware profile summary
+        self._hw_group = QGroupBox("Detected Hardware & Transfer Tuning")
+        hw_layout = QVBoxLayout(self._hw_group)
+        self._hw_label = QLabel("Hardware profile will appear after you select a destination in Step 3.")
+        self._hw_label.setWordWrap(True)
+        self._hw_label.setStyleSheet("color: #aaa; font-size: 12px;")
+        hw_layout.addWidget(self._hw_label)
+        layout.addWidget(self._hw_group)
+
         layout.addStretch()
 
         # Navigation
@@ -159,8 +168,39 @@ class TransferSettingsStep(QWidget):
         save_settings(s)
         self.next_requested.emit()
 
+    def _refresh_hardware_panel(self) -> None:
+        """Update the hardware summary label from WizardState."""
+        profile = self._state.hardware_profile
+        if not profile:
+            return
+
+        def _badge(drive_type: str) -> str:
+            colours = {"SSD": "#4caf50", "HDD": "#ff9800", "Unknown": "#888"}
+            colour = colours.get(drive_type, "#888")
+            return f"<span style='color:{colour}; font-weight:bold;'>{drive_type}</span>"
+
+        admin_note = (
+            "<span style='color:#4caf50'>✓ Admin — Defender exclusions will be applied</span>"
+            if profile.is_admin else
+            "<span style='color:#888'>⚠ Not admin — Defender exclusions unavailable</span>"
+        )
+
+        html = (
+            f"Source drive: {_badge(profile.source_drive_type)}  &nbsp;|&nbsp;  "
+            f"Destination drive: {_badge(profile.dest_drive_type)}<br>"
+            f"Available RAM: <b>{profile.available_ram_gb:.1f} GB</b>  &nbsp;|&nbsp;  "
+            f"CPU cores: <b>{profile.cpu_cores}</b><br>"
+            f"Parallel workers: <b>{profile.optimal_workers}</b>  &nbsp;|&nbsp;  "
+            f"Copy buffer: <b>{profile.optimal_buffer_mb} MB</b><br>"
+            f"{admin_note}"
+        )
+        self._hw_label.setText(html)
+        self._hw_label.setTextFormat(__import__('PyQt6.QtCore', fromlist=['Qt']).Qt.TextFormat.RichText)
+        self._hw_label.setStyleSheet("font-size: 12px;")
+
     def refresh(self) -> None:
         """Restore saved settings when the step becomes visible."""
+        self._refresh_hardware_panel()
         s = self._state.settings
         behavior = s.get("empty_folder_behavior", "flag")
         if behavior == "delete":

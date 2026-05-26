@@ -14,6 +14,7 @@ from typing import Any
 from src.models.scan_result import ScanResult, DriveInfo
 from src.models.transfer_plan import TransferPlan
 from src.core.transfer_engine import TransferStats
+from src.core.hardware_profile import HardwareProfile
 from src.config.constants import DEFAULT_SELECTED_EXTENSIONS, DEFAULT_ORG_MODE
 
 
@@ -27,6 +28,7 @@ class WizardState:
         selected_scan_folders: Explicit list of folders chosen in Step 1 to scan.
         scan_result: Output of the initial drive scan.
         destination_root: Chosen destination folder.
+        hardware_profile: Detected hardware config and optimal transfer settings.
         transfer_plan: Fully built transfer plan.
         transfer_stats: Statistics produced after transfer completes.
         checked_folder_paths: Paths the user has kept checked in Step 4.
@@ -39,6 +41,7 @@ class WizardState:
     scan_result: ScanResult | None = None
     destination_root: Path | None = None
     org_mode: str = DEFAULT_ORG_MODE
+    hardware_profile: HardwareProfile | None = None
     transfer_plan: TransferPlan | None = None
     transfer_stats: TransferStats | None = None
     checked_folder_paths: set[Path] = field(default_factory=set)
