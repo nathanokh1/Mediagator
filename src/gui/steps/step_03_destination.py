@@ -550,8 +550,16 @@ class DestinationStep(QWidget):
         self._start_probe()
         self._start_hardware_detection(path)
 
+    @staticmethod
+    def _stop_worker(worker) -> None:
+        """Gracefully stop a QThread worker if it is still running."""
+        if worker is not None and worker.isRunning():
+            worker.quit()
+            worker.wait(3000)   # wait up to 3 s before giving up
+
     def _start_hardware_detection(self, dest_path: Path) -> None:
         """Kick off hardware detection in the background."""
+        self._stop_worker(self._hw_worker)
         source_roots = self._state.selected_scan_folders
         source_hint = source_roots[0] if source_roots else dest_path
         self._hw_worker = HardwareWorker(source_hint, dest_path)
@@ -569,6 +577,7 @@ class DestinationStep(QWidget):
 
     def _start_drive_scan(self) -> None:
         """Enumerate all drives in the background and populate the cards panel."""
+        self._stop_worker(self._drive_worker)
         self._drive_worker = DriveInfoWorker()
         self._drive_worker.drives_ready.connect(self._on_drives_ready)
         self._drive_worker.start()
@@ -631,6 +640,7 @@ class DestinationStep(QWidget):
             self._space_label.setText(f"Could not read disk info: {exc}")
 
     def _start_probe(self) -> None:
+        self._stop_worker(self._probe_worker)
         total = len(self._state.scan_result.folder_nodes) if self._state.scan_result else 0
         self._probe_bar.setRange(0, max(total, 1))
         self._probe_bar.setValue(0)
@@ -661,6 +671,17 @@ class DestinationStep(QWidget):
     def _on_next(self) -> None:
         if self._state.destination_root:
             self.next_requested.emit()
+
+    def cleanup(self) -> None:
+        """Stop all background workers — call before hiding or resetting the step."""
+        self._stop_worker(self._probe_worker)
+        self._stop_worker(self._hw_worker)
+        self._stop_worker(self._drive_worker)
+
+    def hideEvent(self, event) -> None:
+        """Stop workers when the step is navigated away from."""
+        self.cleanup()
+        super().hideEvent(event)
 
     def refresh(self) -> None:
         if self._state.destination_root:
