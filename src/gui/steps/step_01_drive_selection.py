@@ -121,13 +121,19 @@ class DriveSelectionStep(QWidget):
 
         # Legend
         legend = QHBoxLayout()
-        for colour, text in (
+        legend_items = [
             ("#4caf50", "📷 Media — likely personal photos/videos"),
-            ("#e0e0e0", "📁 Folder — unknown, will be scanned"),
-            ("#616161", "⚙ System — OS/app folder, skipped by default"),
-        ):
-            lbl = QLabel(f"<span style='color:{colour}'>{text}</span>")
-            lbl.setTextFormat(Qt.TextFormat.RichText)
+            (None,      "📁 Folder — unknown, will be scanned"),
+            ("#888888", "⚙ System — OS/app folder, skipped by default"),
+        ]
+        for colour, text in legend_items:
+            lbl = QLabel()
+            if colour:
+                lbl.setText(f"<span style='color:{colour}'>{text}</span>")
+                lbl.setTextFormat(Qt.TextFormat.RichText)
+            else:
+                lbl.setText(text)
+                lbl.setObjectName("hintLabel")
             legend.addWidget(lbl)
             legend.addSpacing(16)
         legend.addStretch()

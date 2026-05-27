@@ -81,24 +81,34 @@ class MainWindow(QMainWindow):
         header_layout.setContentsMargins(16, 0, 16, 0)
         header_layout.setSpacing(10)
 
-        # App icon
+        # App icon + title as a tightly grouped pair
+        brand_widget = QWidget()
+        brand_widget.setStyleSheet("background: transparent;")
+        brand_row = QHBoxLayout(brand_widget)
+        brand_row.setContentsMargins(0, 0, 0, 0)
+        brand_row.setSpacing(8)
+
         if _ICON_PATH.exists():
             icon_lbl = QLabel()
+            icon_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             px = QPixmap(str(_ICON_PATH)).scaled(
-                36, 36, Qt.AspectRatioMode.KeepAspectRatio,
+                32, 32, Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
             icon_lbl.setPixmap(px)
-            icon_lbl.setFixedSize(36, 36)
-            header_layout.addWidget(icon_lbl)
+            icon_lbl.setFixedSize(32, 32)
+            brand_row.addWidget(icon_lbl)
 
         app_title = QLabel("Mediagator")
         app_title.setObjectName("appTitle")
+        app_title.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         font = QFont()
         font.setBold(True)
         font.setPointSize(14)
         app_title.setFont(font)
-        header_layout.addWidget(app_title)
+        brand_row.addWidget(app_title)
+
+        header_layout.addWidget(brand_widget)
         header_layout.addStretch()
 
         # Theme toggle — flat pill button, no emoji circle

@@ -21,8 +21,11 @@ _ICON_PATH = Path(__file__).resolve().parent.parent / "assets" / "icon.ico"
 # Light-theme QSS overrides (applied on top of shared button styles)
 # ---------------------------------------------------------------------------
 _LIGHT_QSS = """
-QWidget          { background-color: #f0f0f5; color: #1a1a2e; }
+QWidget          { background-color: #f0f0f5; color: #111111; }
 QMainWindow      { background-color: #f0f0f5; }
+QLabel           { color: #111111; }
+QCheckBox        { color: #111111; }
+QRadioButton     { color: #111111; }
 QGroupBox        { border: 1px solid #bbb; border-radius: 6px;
                    margin-top: 12px; padding-top: 8px; color: #1a1a2e; }
 QGroupBox::title { subcontrol-origin: margin; left: 10px;
@@ -49,14 +52,11 @@ QScrollBar::handle:horizontal { background: #aaa; border-radius: 4px; }
 QWidget#navBar   { background: #e8e8f2; border-top: 1px solid #ccc; }
 QWidget#appHeader { background: #fafafa; border-bottom: 3px solid #ff9800; }
 QLabel#appTitle   { color: #e65100; }
-QLabel#hintLabel    { color: #666; }
-QLabel#sectionLabel { color: #222; }
-QLabel#monoLabel    { color: #555; font-family: monospace; }
+QLabel#hintLabel    { color: #444; }
+QLabel#sectionLabel { color: #111; }
+QLabel#monoLabel    { color: #444; font-family: monospace; }
 QRadioButton#hintRadio { color: #1a1a2e; }
-QCheckBox#hintCheck { color: #555; }
-QCheckBox        { color: #1a1a2e; }
-QRadioButton     { color: #1a1a2e; }
-QLabel           { color: #1a1a2e; }
+QCheckBox#hintCheck { color: #444; }
 QComboBox        { background: #ffffff; border: 1px solid #bbb;
                    border-radius: 4px; color: #1a1a2e; padding: 3px 8px; }
 QComboBox::drop-down { border: none; }
