@@ -107,13 +107,9 @@ class TransferWorker(QThread):
         self._cancel = cancellation_event or threading.Event()
         self._skip_paths: set[str] = skip_paths or set()
 
-        # Adjust totals to account for files already done
-        already_done = sum(
-            1 for phase in plan.phases
-            for folder in phase.folders
-            for f in folder.source_files
-            if str(f) in self._skip_paths
-        )
+        # Adjust totals to account for files already done.
+        # Each entry in skip_paths is one source file path string.
+        already_done = len(self._skip_paths)
         self._stats = TransferStats(
             files_completed=already_done,
             files_remaining=max(0, plan.total_files - already_done),
@@ -140,19 +136,23 @@ class TransferWorker(QThread):
     def run(self) -> None:
         """Execute all phases sequentially."""
         start_time = time.monotonic()
-        total_phases = len(self._plan.phases)
+        try:
+            total_phases = len(self._plan.phases)
 
-        for phase in self._plan.phases:
-            if self._cancel.is_set():
-                break
-            phase.status = PhaseStatus.RUNNING
-            self._execute_phase(phase, start_time)
-            if not self._cancel.is_set():
-                phase.status = PhaseStatus.COMPLETED
-                self.phase_completed.emit(phase.phase_number, total_phases)
+            for phase in self._plan.phases:
+                if self._cancel.is_set():
+                    break
+                phase.status = PhaseStatus.RUNNING
+                self._execute_phase(phase, start_time)
+                if not self._cancel.is_set():
+                    phase.status = PhaseStatus.COMPLETED
+                    self.phase_completed.emit(phase.phase_number, total_phases)
 
-        self._stats.elapsed_seconds = time.monotonic() - start_time
-        self.transfer_complete.emit(self._stats)
+        except Exception:
+            logger.exception("Unhandled exception in TransferWorker.run()")
+        finally:
+            self._stats.elapsed_seconds = time.monotonic() - start_time
+            self.transfer_complete.emit(self._stats)
 
     # Number of folders processed concurrently within a phase.
     # 3 workers: source-read, in-flight copy, and destination-write can all
@@ -220,7 +220,17 @@ class TransferWorker(QThread):
                 return
 
             dest_file = dest_folder / src_file.name
-            self._transfer_file(src_file, dest_file, start_time)
+            try:
+                self._transfer_file(src_file, dest_file, start_time)
+            except FileNotFoundError:
+                # File disappeared (e.g. already moved in a previous run).
+                ts = time.strftime("%H:%M:%S")
+                logger.warning("Source file missing, skipping: %s", src_file)
+                self.error_occurred.emit(ts, str(src_file), "Source file not found — already moved?")
+            except Exception as exc:
+                ts = time.strftime("%H:%M:%S")
+                logger.error("Unexpected error transferring %s: %s", src_file, exc)
+                self.error_occurred.emit(ts, str(src_file), str(exc))
 
         # Apply empty-folder behavior
         if not self._cancel.is_set():
@@ -310,7 +320,10 @@ class TransferWorker(QThread):
                     "RENAME", src, dest, src.stat().st_size, "RENAMED", "",
                 )
 
-        size = src.stat().st_size
+        try:
+            size = src.stat().st_size
+        except FileNotFoundError:
+            raise  # let _transfer_folder's per-file handler catch and skip this file
         if safe_copy(src, dest, buffer=self._copy_buffer):
             deleted = safe_delete(src)
             self._stats.files_completed += 1

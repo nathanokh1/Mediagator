@@ -354,8 +354,8 @@ class DriveTreeWidget(QTreeWidget):
                 if parent_state == Qt.CheckState.Unchecked:
                     child_item.setCheckState(_COL_NAME, Qt.CheckState.Unchecked)
                 elif parent_state == Qt.CheckState.Checked:
-                    # Keep the smart default (media=checked, system=unchecked)
-                    pass
+                    # Parent is fully checked — propagate that to all new children
+                    child_item.setCheckState(_COL_NAME, Qt.CheckState.Checked)
                 # PartiallyChecked → keep smart default for the new children
                 self._add_placeholder(child_item)
                 self._start_size_loader(child_path, child_item)

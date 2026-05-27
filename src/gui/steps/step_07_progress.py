@@ -184,27 +184,32 @@ class TransferProgressStep(QWidget):
             except Exception:
                 pass
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        transfer_logger = get_transfer_logger(ts)
+        try:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            transfer_logger = get_transfer_logger(ts)
 
-        if plan.is_phased and plan.phase_count > 1:
-            self._phase_label.setText(f"Phase 1 of {plan.phase_count}")
-            self._phase_label.show()
+            if plan.is_phased and plan.phase_count > 1:
+                self._phase_label.setText(f"Phase 1 of {plan.phase_count}")
+                self._phase_label.show()
 
-        self._worker = TransferWorker(
-            plan=plan,
-            settings=self._state.settings,
-            transfer_logger=transfer_logger,
-            cancellation_event=self._cancel_event,
-            hardware_profile=self._state.hardware_profile,
-            skip_paths=self._completed_paths,
-        )
-        self._worker.progress_updated.connect(self._on_progress)
-        self._worker.item_completed.connect(self._on_item_completed)
-        self._worker.error_occurred.connect(self._on_error)
-        self._worker.phase_completed.connect(self._on_phase_complete)
-        self._worker.transfer_complete.connect(self._on_transfer_complete)
-        self._worker.start()
+            self._worker = TransferWorker(
+                plan=plan,
+                settings=self._state.settings,
+                transfer_logger=transfer_logger,
+                cancellation_event=self._cancel_event,
+                hardware_profile=self._state.hardware_profile,
+                skip_paths=self._completed_paths,
+            )
+            self._worker.progress_updated.connect(self._on_progress)
+            self._worker.item_completed.connect(self._on_item_completed)
+            self._worker.error_occurred.connect(self._on_error)
+            self._worker.phase_completed.connect(self._on_phase_complete)
+            self._worker.transfer_complete.connect(self._on_transfer_complete)
+            self._worker.start()
+        except Exception:
+            logger.exception("Failed to start TransferWorker")
+            self._cancel_btn.setEnabled(False)
+            self._cancel_btn.setText("Error — check logs")
 
     @pyqtSlot(int, int, float, float, str, str)
     def _on_progress(
