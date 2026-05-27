@@ -20,9 +20,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.config.constants import LOG_FORMAT, LOG_DATE_FORMAT
+from src.config.constants import LOG_FORMAT, LOG_DATE_FORMAT, APP_NAME
 
-_LOGS_DIR = Path("logs")
+# Always write logs to %APPDATA%\Mediagator\logs\ so they land in a consistent
+# place regardless of whether the app is run from source or a PyInstaller bundle,
+# and so the dist folder never has open file handles that block rebuilds.
+_LOGS_DIR = Path.home() / "AppData" / "Roaming" / APP_NAME / "logs"
 _APP_LOG   = _LOGS_DIR / "app.log"
 
 # Module-level async queue + listener (created once on first call to setup_logging)
