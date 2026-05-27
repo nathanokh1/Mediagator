@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 3: Destination Folder.
+Mediagator — Step 3: Destination Folder.
 
 User picks a destination and chooses one of three organisation modes.
 A background probe scan resolves destination paths for all source folders.

@@ -1,5 +1,5 @@
 """
-MediaMitigator — FileTypeFilterWidget.
+Mediagator — FileTypeFilterWidget.
 
 Collapsible grouped file-type selector for the Drive Selection step.
 

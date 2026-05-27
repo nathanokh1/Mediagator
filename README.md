@@ -1,8 +1,8 @@
-# MediaMitigator
+# Mediagator
 
 **A free, open-source Windows tool for organising and transferring your personal photo and video library.**
 
-MediaMitigator scans your drives for media files, lets you choose exactly what to move, and transfers everything to a destination drive — sorted by year, year/month, file type, or flat — with real-time progress and a full report when done.
+Mediagator scans your drives for media files, lets you choose exactly what to move, and transfers everything to a destination drive — sorted by year, year/month, file type, or flat — with real-time progress and a full report when done.
 
 ---
 
@@ -72,7 +72,7 @@ src/
   main.py              # Entry point (handles UAC elevation)
   config/
     constants.py       # App-wide constants & enums
-    settings.py        # Settings persistence (AppData/MediaMitigator/)
+    settings.py        # Settings persistence (AppData/Mediagator/)
   core/
     scanner.py         # Drive & folder scanning (os.scandir, deduplication)
     analyzer.py        # Destination path resolution & transfer plan

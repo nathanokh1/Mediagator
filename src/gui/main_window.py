@@ -1,5 +1,5 @@
 """
-MediaMitigator — MainWindow.
+Mediagator — MainWindow.
 
 Hosts the chevron step indicator and the QStackedWidget that
 renders each of the 8 wizard steps.
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(24, 0, 24, 0)
 
-        app_title = QLabel("MediaMitigator")
+        app_title = QLabel("Mediagator")
         font = QFont()
         font.setBold(True)
         font.setPointSize(13)

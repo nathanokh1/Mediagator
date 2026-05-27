@@ -1,5 +1,5 @@
 """
-MediaMitigator — ScanDashboardWidget.
+Mediagator — ScanDashboardWidget.
 
 Rich visual summary of a completed scan.  Uses QPainter for inline
 bar charts — no external charting dependencies required.

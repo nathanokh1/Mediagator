@@ -1,5 +1,5 @@
 """
-MediaMitigator — ProgressWidget.
+Mediagator — ProgressWidget.
 
 Rich transfer progress display with a large progress bar, color-coded
 speed card, live ETA, and current-file indicator.

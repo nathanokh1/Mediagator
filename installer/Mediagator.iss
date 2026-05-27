@@ -1,18 +1,18 @@
-; MediaMitigator — Inno Setup Installer Script
+; Mediagator — Inno Setup Installer Script
 ; Requires Inno Setup 6.x  (https://jrsoftware.org/isinfo.php)
 ;
-; To compile:  ISCC.exe installer\MediaMitigator.iss
+; To compile:  ISCC.exe installer\Mediagator.iss
 ; Or:          Open in Inno Setup IDE and press Compile
 ;
-; Prerequisite: run build.ps1 first to produce dist\MediaMitigator\
+; Prerequisite: run build.ps1 first to produce dist\Mediagator\
 
-#define AppName "MediaMitigator"
+#define AppName "Mediagator"
 #define AppVersion "1.0.0"
 #define AppPublisher "Nathan"
 #define AppURL "https://github.com/nathanokh1/Mediagator"
-#define AppExeName "MediaMitigator.exe"
+#define AppExeName "Mediagator.exe"
 #define AppDescription "Media Transfer & Organisation Tool"
-#define SourceDir "..\dist\MediaMitigator"
+#define SourceDir "..\dist\Mediagator"
 #define IconFile "..\assets\icon.ico"
 
 [Setup]
@@ -29,7 +29,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
-OutputBaseFilename=MediaMitigator_Setup_{#AppVersion}
+OutputBaseFilename=Mediagator_Setup_{#AppVersion}
 SetupIconFile={#IconFile}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -73,7 +73,7 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait
 
 [UninstallDelete]
 ; Remove any user data left in AppData on uninstall (optional — comment out to keep user data)
-; Type: filesandordirs; Name: "{localappdata}\MediaMitigator"
+; Type: filesandordirs; Name: "{localappdata}\Mediagator"
 
 [Code]
 // Check for existing running instance before install

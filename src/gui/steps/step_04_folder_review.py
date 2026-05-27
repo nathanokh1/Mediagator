@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 4: Folder Review Tree.
+Mediagator — Step 4: Folder Review Tree.
 
 Shows all source folders in a hierarchical QTreeWidget.  User can
 uncheck folders and filter by name.

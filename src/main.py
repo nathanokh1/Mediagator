@@ -1,5 +1,5 @@
 """
-MediaMitigator — Application entry point.
+Mediagator — Application entry point.
 
 Run with:  python src/main.py
 

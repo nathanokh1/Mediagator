@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 5: Transfer Settings.
+Mediagator — Step 5: Transfer Settings.
 
 Lets the user configure empty-folder behavior, notifications, and
 the optional Lightroom import report.

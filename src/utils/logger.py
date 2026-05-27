@@ -1,5 +1,5 @@
 """
-MediaMitigator — Logging configuration.
+Mediagator — Logging configuration.
 
 Two log outputs:
   1. Console (stdout)  — DEBUG level, development visibility.
@@ -83,7 +83,7 @@ def setup_logging(level: int = logging.DEBUG) -> None:
 
     # Log the startup so app.log always shows when the app was launched
     root.info(
-        "=" * 60 + "\n  MediaMitigator started  %s\n" + "=" * 60,
+        "=" * 60 + "\n  Mediagator started  %s\n" + "=" * 60,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
 

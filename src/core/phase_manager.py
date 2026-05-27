@@ -1,5 +1,5 @@
 """
-MediaMitigator — Phase manager.
+Mediagator — Phase manager.
 
 Splits a TransferPlan into timed phases of ~45-minute chunks when the
 estimated transfer duration exceeds 60 minutes.

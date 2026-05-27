@@ -1,5 +1,5 @@
 """
-MediaMitigator — FolderNode model.
+Mediagator — FolderNode model.
 
 Represents a single source folder unit eligible for transfer.
 

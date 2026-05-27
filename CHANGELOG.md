@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to MediaMitigator are documented here.
+All notable changes to Mediagator are documented here.
 
 ## [Unreleased]
 

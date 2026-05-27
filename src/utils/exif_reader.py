@@ -1,5 +1,5 @@
 """
-MediaMitigator — EXIF and media metadata reader.
+Mediagator — EXIF and media metadata reader.
 
 Provides a unified interface for extracting capture dates from image and
 video files using Pillow, piexif, and pymediainfo.

@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 2: Initial Scan.
+Mediagator — Step 2: Initial Scan.
 
 Runs a fast background drive scan and shows a rich visual dashboard.
 Results are cached in WizardState — navigating back and returning does

@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 6: Pre-Transfer Analysis.
+Mediagator — Step 6: Pre-Transfer Analysis.
 
 What this step does
 -------------------

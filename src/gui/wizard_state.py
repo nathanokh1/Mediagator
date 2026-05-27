@@ -1,5 +1,5 @@
 """
-MediaMitigator — Shared wizard state.
+Mediagator — Shared wizard state.
 
 WizardState is the single source of truth threaded through every step.
 

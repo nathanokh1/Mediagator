@@ -1,5 +1,5 @@
 """
-MediaMitigator — Transfer engine.
+Mediagator — Transfer engine.
 
 Executes the copy-verify-delete transfer for all phases, emitting
 progress signals for the GUI.  Runs inside a QThread.

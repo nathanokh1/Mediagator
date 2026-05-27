@@ -1,4 +1,4 @@
-# MediaMitigator — Cursor Setup Guide
+# Mediagator — Cursor Setup Guide
 
 ## What's In This Package
 
@@ -20,13 +20,13 @@ README-SETUP.md                   — This file
 ## How to Set This Up
 
 ### Step 1 — Create your project folder
-Create a new empty folder called `MediaMitigator` wherever you want the project to live.
+Create a new empty folder called `Mediagator` wherever you want the project to live.
 
 ### Step 2 — Copy the .cursor folder
-Copy the entire `.cursor/` folder from this package into your `MediaMitigator` project folder.
+Copy the entire `.cursor/` folder from this package into your `Mediagator` project folder.
 Your structure should look like:
 ```
-MediaMitigator/
+Mediagator/
   .cursor/
     rules/
       development-lifecycle.mdc
@@ -37,7 +37,7 @@ MediaMitigator/
 ```
 
 ### Step 3 — Open in Cursor
-Open the `MediaMitigator` folder in Cursor (File → Open Folder).
+Open the `Mediagator` folder in Cursor (File → Open Folder).
 Cursor will automatically detect and load the rules from `.cursor/rules/`.
 
 ### Step 4 — Initialize Git

@@ -1,5 +1,5 @@
 """
-MediaMitigator — ErrorPanelWidget.
+Mediagator — ErrorPanelWidget.
 
 Collapsible panel that lists transfer errors/flags inline, with an
 Export Errors button.

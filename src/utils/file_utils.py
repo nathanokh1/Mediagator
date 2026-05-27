@@ -1,5 +1,5 @@
 """
-MediaMitigator — File system utility helpers.
+Mediagator — File system utility helpers.
 
 Author: Nathan
 """

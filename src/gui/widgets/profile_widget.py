@@ -1,5 +1,5 @@
 """
-MediaMitigator — ProfileWidget.
+Mediagator — ProfileWidget.
 
 Compact horizontal toolbar for saving and loading named scan profiles.
 A profile stores: source folders, file-type extensions, destination path

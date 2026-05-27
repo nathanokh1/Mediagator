@@ -1,7 +1,7 @@
 """
-MediaMitigator — Persistent settings management.
+Mediagator — Persistent settings management.
 
-Loads and saves user settings to %APPDATA%/MediaMitigator/settings.json.
+Loads and saves user settings to %APPDATA%/Mediagator/settings.json.
 
 Author: Nathan
 """

@@ -1,5 +1,5 @@
 """
-MediaMitigator — ScanResult model.
+Mediagator — ScanResult model.
 
 Holds the output of the initial drive scan.
 

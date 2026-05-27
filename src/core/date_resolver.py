@@ -1,5 +1,5 @@
 """
-MediaMitigator — Date resolver.
+Mediagator — Date resolver.
 
 Determines the best capture date for a media file and the majority
 year/month for a folder full of media.

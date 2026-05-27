@@ -1,5 +1,5 @@
 """
-MediaMitigator — Duplicate file detector.
+Mediagator — Duplicate file detector.
 
 Determines whether a source file is a true duplicate of an already-transferred
 destination file or another file in the transfer queue.

@@ -1,5 +1,5 @@
 """
-MediaMitigator — Transfer analyzer.
+Mediagator — Transfer analyzer.
 
 Resolves destination paths for each FolderNode and runs the disk
 speed test to estimate transfer duration.

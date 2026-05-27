@@ -1,5 +1,5 @@
 """
-MediaMitigator — Drive and folder scanner.
+Mediagator — Drive and folder scanner.
 
 Walks user-selected folders for media files using os.scandir (much faster
 than rglob) with batched signal emission and optional parallel root scanning

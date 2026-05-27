@@ -1,5 +1,5 @@
 """
-MediaMitigator — Application bootstrap.
+Mediagator — Application bootstrap.
 
 Creates the QApplication, applies the dark theme, loads settings,
 and launches the MainWindow.
@@ -262,7 +262,7 @@ def run() -> int:
     setup_logging()
 
     app = QApplication(sys.argv)
-    app.setApplicationName("MediaMitigator")
+    app.setApplicationName("Mediagator")
     app.setOrganizationName("Nathan")
     if _ICON_PATH.exists():
         app.setWindowIcon(QIcon(str(_ICON_PATH)))

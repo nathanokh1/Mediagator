@@ -1,5 +1,5 @@
 """
-MediaMitigator — TransferPlan model.
+Mediagator — TransferPlan model.
 
 Holds the complete plan produced by the analyzer before any transfer starts.
 

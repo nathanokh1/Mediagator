@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for MediaMitigator
-# Run:  pyinstaller MediaMitigator.spec
+# PyInstaller spec for Mediagator
+# Run:  pyinstaller Mediagator.spec
 #
 # Requirements:
 #   pip install pyinstaller
 #
-# Output:  dist/MediaMitigator/MediaMitigator.exe  (folder bundle)
-#          dist/MediaMitigator_onefile.exe           (single .exe, slower start)
+# Output:  dist/Mediagator/Mediagator.exe  (folder bundle)
+#          dist/Mediagator_onefile.exe           (single .exe, slower start)
 
 import sys
 from pathlib import Path
@@ -69,7 +69,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='MediaMitigator',
+    name='Mediagator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -93,5 +93,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='MediaMitigator',
+    name='Mediagator',
 )

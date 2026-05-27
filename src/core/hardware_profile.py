@@ -1,5 +1,5 @@
 """
-MediaMitigator — Hardware Profile.
+Mediagator — Hardware Profile.
 
 Detects source and destination drive types (SSD vs HDD), available RAM,
 and CPU core count, then computes optimal transfer settings.

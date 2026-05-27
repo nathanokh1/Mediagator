@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 1: Drive Selection.
+Mediagator — Step 1: Drive Selection.
 
 Full layout (scrollable):
   • Expandable drive → folder tree with smart pre-check
@@ -7,7 +7,7 @@ Full layout (scrollable):
   • Folder Exclusion List — names to always skip during scanning
 
 Settings (selected folders, extensions, exclusions) persist to
-%APPDATA%/MediaMitigator/settings.json.
+%APPDATA%/Mediagator/settings.json.
 
 Author: Nathan
 """

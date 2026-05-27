@@ -1,5 +1,5 @@
 """
-MediaMitigator — Welcome / Intro Step (Step 0).
+Mediagator — Welcome / Intro Step (Step 0).
 
 Shown on first launch (and every subsequent launch until the user checks
 "Don't show this again").  Explains what the tool does in plain language,
@@ -85,7 +85,7 @@ class WelcomeStep(QWidget):
         title_col = QVBoxLayout()
         title_col.setSpacing(6)
 
-        title = QLabel("Welcome to MediaMitigator")
+        title = QLabel("Welcome to Mediagator")
         tf = QFont()
         tf.setPointSize(22)
         tf.setBold(True)
@@ -131,7 +131,7 @@ class WelcomeStep(QWidget):
         link_lbl = QLabel(
             f'For full documentation, source code, and release notes visit '
             f'<a href="{_GITHUB_URL}" style="color:#ff9800;">'
-            f'the MediaMitigator GitHub repository</a>.'
+            f'the Mediagator GitHub repository</a>.'
         )
         link_lbl.setOpenExternalLinks(True)
         link_lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -166,7 +166,7 @@ class WelcomeStep(QWidget):
 
         # disclaimer blurb
         disclaimer = QLabel(
-            "MediaMitigator is provided <b>free of charge</b> with no warranty. "
+            "Mediagator is provided <b>free of charge</b> with no warranty. "
             "Use at your own risk. Contributions and donations are appreciated — "
             "they help keep this tool maintained and free."
         )

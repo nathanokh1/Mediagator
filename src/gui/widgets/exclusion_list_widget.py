@@ -1,5 +1,5 @@
 """
-MediaMitigator — ExclusionListWidget.
+Mediagator — ExclusionListWidget.
 
 A list widget with Add / Remove buttons for managing the folder
 exclusion list used during scanning.

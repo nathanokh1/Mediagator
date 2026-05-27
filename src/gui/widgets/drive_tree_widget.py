@@ -1,5 +1,5 @@
 """
-MediaMitigator — DriveTreeWidget.
+Mediagator — DriveTreeWidget.
 
 Expandable tree showing drives → folders → subfolders (unlimited depth)
 with smart pre-check classification and async folder size loading.

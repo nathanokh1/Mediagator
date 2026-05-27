@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 8: Final Report.
+Mediagator — Step 8: Final Report.
 
 Generates and displays an HTML transfer report.  Provides navigation
 buttons for opening the report, the destination folder, starting a new
@@ -144,7 +144,7 @@ def _build_html(state: WizardState) -> tuple[str, Path]:
 <html>
 <head>
 <meta charset='utf-8'>
-<title>MediaMitigator Report — {ts}</title>
+<title>Mediagator Report — {ts}</title>
 <style>
   body {{ background:#1a1a1a; color:#e0e0e0; font-family:sans-serif; padding:32px; }}
   h1 {{ color:#ff9800; }}
@@ -154,7 +154,7 @@ def _build_html(state: WizardState) -> tuple[str, Path]:
 </style>
 </head>
 <body>
-<h1>MediaMitigator Transfer Report</h1>
+<h1>Mediagator Transfer Report</h1>
 <p style='color:#aaa'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 {body}
 </body>

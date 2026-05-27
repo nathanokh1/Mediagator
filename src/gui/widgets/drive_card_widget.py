@@ -1,5 +1,5 @@
 """
-MediaMitigator — DriveCardWidget.
+Mediagator — DriveCardWidget.
 
 Displays a single drive as a selectable card with label, usage bar,
 free space and total size.

@@ -1,5 +1,5 @@
 """
-MediaMitigator — TransferPhase model.
+Mediagator — TransferPhase model.
 
 Represents a single timed phase of a multi-phase transfer.
 

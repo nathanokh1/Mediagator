@@ -1,5 +1,5 @@
 """
-MediaMitigator — FolderTreeWidget.
+Mediagator — FolderTreeWidget.
 
 QTreeWidget subclass for displaying and managing source folders
 before transfer.

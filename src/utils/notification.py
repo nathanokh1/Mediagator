@@ -1,5 +1,5 @@
 """
-MediaMitigator — Notification helpers (toast + optional email).
+Mediagator — Notification helpers (toast + optional email).
 
 Author: Nathan
 """
@@ -24,7 +24,7 @@ def send_toast(title: str, message: str) -> None:
         notification.notify(
             title=title,
             message=message,
-            app_name="MediaMitigator",
+            app_name="Mediagator",
             timeout=8,
         )
     except Exception as exc:

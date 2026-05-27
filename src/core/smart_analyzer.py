@@ -1,5 +1,5 @@
 """
-MediaMitigator — Smart media analyzer.
+Mediagator — Smart media analyzer.
 
 Samples the scan result to produce AI-style insights without requiring
 any external ML model:

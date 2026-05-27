@@ -1,5 +1,5 @@
 """
-MediaMitigator — Date utility helpers.
+Mediagator — Date utility helpers.
 
 Author: Nathan
 """

@@ -1,5 +1,5 @@
 """
-MediaMitigator — Step 7: Transfer Progress.
+Mediagator — Step 7: Transfer Progress.
 
 Runs the TransferWorker and displays live progress, phase indicator,
 and the collapsible error panel.
@@ -255,7 +255,7 @@ class TransferProgressStep(QWidget):
         self._error_panel.add_error(timestamp, source, issue)
         error_count = len(self._error_panel._entries)
         if error_count == 10:
-            notify(self._state.settings, "MediaMitigator — Errors", f"{error_count} errors encountered during transfer.")
+            notify(self._state.settings, "Mediagator — Errors", f"{error_count} errors encountered during transfer.")
 
     @pyqtSlot(int, int)
     def _on_phase_complete(self, phase_num: int, total: int) -> None:
@@ -268,7 +268,7 @@ class TransferProgressStep(QWidget):
         self._phase_label.setText(f"Phase {phase_num + 1} of {total}")
         notify(
             self._state.settings,
-            "MediaMitigator — Phase Complete",
+            "Mediagator — Phase Complete",
             f"Phase {phase_num} of {total} complete.  Starting phase {phase_num + 1}…",
         )
 
@@ -284,7 +284,7 @@ class TransferProgressStep(QWidget):
         remove_defender_exclusions(self._defender_paths)
         notify(
             self._state.settings,
-            "MediaMitigator — Transfer Complete",
+            "Mediagator — Transfer Complete",
             f"All {stats.files_completed:,} files transferred successfully.",
         )
         self._cancel_btn.setEnabled(False)

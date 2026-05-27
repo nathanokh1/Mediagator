@@ -1,5 +1,5 @@
 """
-MediaMitigator — Application-wide constants.
+Mediagator — Application-wide constants.
 
 Author: Nathan
 """
@@ -209,7 +209,7 @@ C_DRIVE_SYSTEM_ROOTS: set[str] = {
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-APP_NAME = "MediaMitigator"
+APP_NAME = "Mediagator"
 APPDATA_DIR: Path = Path(os.environ.get("APPDATA", Path.home())) / APP_NAME
 SETTINGS_FILE: Path = APPDATA_DIR / "settings.json"
 SESSION_FILE: Path = APPDATA_DIR / "session_state.json"
@@ -236,7 +236,7 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # ---------------------------------------------------------------------------
 WINDOW_MIN_WIDTH: int = 1000
 WINDOW_MIN_HEIGHT: int = 700
-WINDOW_TITLE: str = "MediaMitigator"
+WINDOW_TITLE: str = "Mediagator"
 
 STEP_NAMES: list[str] = [
     "Welcome",
