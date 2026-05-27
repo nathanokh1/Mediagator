@@ -98,7 +98,8 @@ class WelcomeStep(QWidget):
             "your photos and videos — simply and safely."
         )
         tagline.setWordWrap(True)
-        tagline.setStyleSheet("color: #cccccc; font-size: 13px;")
+        tagline.setObjectName("hintLabel")
+        tagline.setStyleSheet("font-size: 13px;")
         title_col.addWidget(tagline)
 
         hero.addLayout(title_col)
@@ -135,7 +136,8 @@ class WelcomeStep(QWidget):
         )
         link_lbl.setOpenExternalLinks(True)
         link_lbl.setTextFormat(Qt.TextFormat.RichText)
-        link_lbl.setStyleSheet("color: #aaa; font-size: 12px;")
+        link_lbl.setObjectName("hintLabel")
+        link_lbl.setStyleSheet("font-size: 12px;")
         link_lbl.setWordWrap(True)
         link_row.addWidget(link_lbl)
         link_row.addStretch()
@@ -151,7 +153,8 @@ class WelcomeStep(QWidget):
             "Actual performance depends on file size, fragmentation, and drive health."
         )
         speed_note.setWordWrap(True)
-        speed_note.setStyleSheet("color: #888; font-size: 11px;")
+        speed_note.setObjectName("hintLabel")
+        speed_note.setStyleSheet("font-size: 11px;")
         cl.addWidget(speed_title)
         cl.addWidget(speed_note)
         cl.addWidget(_speed_table())
@@ -180,7 +183,8 @@ class WelcomeStep(QWidget):
         nav_layout.addSpacing(16)
 
         self._no_show_cb = QCheckBox("Don't show this again")
-        self._no_show_cb.setStyleSheet("color: #888; font-size: 11px;")
+        self._no_show_cb.setObjectName("hintCheck")
+        self._no_show_cb.setStyleSheet("font-size: 11px;")
         nav_layout.addWidget(self._no_show_cb)
 
         nav_layout.addSpacing(12)
@@ -230,7 +234,7 @@ def _section_label(text: str) -> QLabel:
     f.setPointSize(12)
     f.setBold(True)
     lbl.setFont(f)
-    lbl.setStyleSheet("color: #e0e0e0;")
+    lbl.setObjectName("sectionLabel")
     return lbl
 
 
@@ -263,7 +267,8 @@ def _bullet_card(icon: str, heading: str, body: str) -> QFrame:
 
     b_lbl = QLabel(body)
     b_lbl.setWordWrap(True)
-    b_lbl.setStyleSheet("color: #cccccc; font-size: 12px;")
+    b_lbl.setObjectName("hintLabel")
+    b_lbl.setStyleSheet("font-size: 12px;")
     text_col.addWidget(b_lbl)
 
     row.addLayout(text_col)

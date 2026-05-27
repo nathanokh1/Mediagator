@@ -49,6 +49,11 @@ QScrollBar::handle:horizontal { background: #aaa; border-radius: 4px; }
 QWidget#navBar   { background: #e8e8f2; border-top: 1px solid #ccc; }
 QWidget#appHeader { background: #ffffff; border-bottom: 1px solid #ddd; }
 QLabel#appTitle   { color: #e65100; }
+QLabel#hintLabel    { color: #666; }
+QLabel#sectionLabel { color: #222; }
+QLabel#monoLabel    { color: #555; font-family: monospace; }
+QRadioButton#hintRadio { color: #1a1a2e; }
+QCheckBox#hintCheck { color: #555; }
 QCheckBox        { color: #1a1a2e; }
 QRadioButton     { color: #1a1a2e; }
 QLabel           { color: #1a1a2e; }
@@ -160,6 +165,11 @@ QWidget#appHeader {
 QLabel#appTitle {
     color: #ff9800;
 }
+QLabel#hintLabel    { color: #888; }
+QLabel#sectionLabel { color: #e0e0e0; }
+QLabel#monoLabel    { color: #888; font-family: monospace; }
+QRadioButton#hintRadio { color: #e0e0e0; }
+QCheckBox#hintCheck { color: #888; }
 """
 
 

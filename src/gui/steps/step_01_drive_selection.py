@@ -88,7 +88,8 @@ class DriveSelectionStep(QWidget):
         )
         subtitle.setWordWrap(True)
         subtitle.setTextFormat(Qt.TextFormat.RichText)
-        subtitle.setStyleSheet("color: #aaa; font-size: 12px;")
+        subtitle.setObjectName("hintLabel")
+        subtitle.setStyleSheet("font-size: 12px;")
         layout.addWidget(subtitle)
 
         # ── Drive / Folder tree ────────────────────────────────────────
@@ -107,7 +108,8 @@ class DriveSelectionStep(QWidget):
             toolbar.addWidget(btn)
         toolbar.addStretch()
         self._selection_label = QLabel("0 folders selected")
-        self._selection_label.setStyleSheet("color: #aaa; font-size: 11px;")
+        self._selection_label.setObjectName("hintLabel")
+        self._selection_label.setStyleSheet("font-size: 11px;")
         toolbar.addWidget(self._selection_label)
         drives_layout.addLayout(toolbar)
 
@@ -154,7 +156,8 @@ class DriveSelectionStep(QWidget):
         nav_layout.setContentsMargins(24, 0, 24, 0)
 
         self._status_label = QLabel("")
-        self._status_label.setStyleSheet("color: #888; font-size: 11px;")
+        self._status_label.setObjectName("hintLabel")
+        self._status_label.setStyleSheet("font-size: 11px;")
         nav_layout.addWidget(self._status_label)
         nav_layout.addStretch()
 

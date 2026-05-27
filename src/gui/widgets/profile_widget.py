@@ -49,7 +49,8 @@ class ProfileWidget(QWidget):
         lay.setSpacing(8)
 
         lbl = QLabel("📋  Profile:")
-        lbl.setStyleSheet("color: #aaa; font-size: 12px;")
+        lbl.setObjectName("hintLabel")
+        lbl.setStyleSheet("font-size: 12px;")
         lay.addWidget(lbl)
 
         self._combo = QComboBox()

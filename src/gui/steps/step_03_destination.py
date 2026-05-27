@@ -341,7 +341,7 @@ class DestinationStep(QWidget):
             "then choose how you want the files organised."
         )
         subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("color: #aaa;")
+        subtitle.setObjectName("hintLabel")
         layout.addWidget(subtitle)
 
         # ── Available Drives ──────────────────────────────────────────
@@ -350,7 +350,8 @@ class DestinationStep(QWidget):
         drives_outer.setSpacing(6)
 
         self._drives_hint = QLabel("Scanning available drives…")
-        self._drives_hint.setStyleSheet("color: #888; font-size: 11px;")
+        self._drives_hint.setObjectName("hintLabel")
+        self._drives_hint.setStyleSheet("font-size: 11px;")
         drives_outer.addWidget(self._drives_hint)
 
         cards_scroll = QScrollArea()
@@ -426,7 +427,8 @@ class DestinationStep(QWidget):
             row = QHBoxLayout()
             row.setSpacing(10)
             radio = QRadioButton(label)
-            radio.setStyleSheet("font-size: 13px; color: #e0e0e0;")
+            radio.setObjectName("hintRadio")
+            radio.setStyleSheet("font-size: 13px;")
             self._mode_group.addButton(radio, idx)
             radio.toggled.connect(self._on_mode_changed)
             row.addWidget(radio)
@@ -446,7 +448,8 @@ class DestinationStep(QWidget):
 
         preview_row = QHBoxLayout()
         preview_lbl = QLabel("Preview:")
-        preview_lbl.setStyleSheet("color: #888; font-size: 11px;")
+        preview_lbl.setObjectName("hintLabel")
+        preview_lbl.setStyleSheet("font-size: 11px;")
         preview_lbl.setFixedWidth(56)
         self._preview_label = QLabel()
         self._preview_label.setStyleSheet(
@@ -470,7 +473,8 @@ class DestinationStep(QWidget):
         probe_layout.addWidget(self._probe_bar)
 
         self._probe_status = QLabel("Waiting for destination selection.")
-        self._probe_status.setStyleSheet("color: #aaa; font-size: 11px;")
+        self._probe_status.setObjectName("hintLabel")
+        self._probe_status.setStyleSheet("font-size: 11px;")
         probe_layout.addWidget(self._probe_status)
         layout.addWidget(probe_group)
 
@@ -528,7 +532,8 @@ class DestinationStep(QWidget):
         mode = self._state.org_mode
         if mode not in self._MODE_IDS:
             self._preview_label.setText("← Select an organisation mode to see a preview")
-            self._preview_label.setStyleSheet("color: #888; font-size: 11px; font-style: italic;")
+            self._preview_label.setObjectName("hintLabel")
+            self._preview_label.setStyleSheet("font-size: 11px; font-style: italic;")
             return
         root = self._state.destination_root or Path("dest")
         if mode == OrgMode.YEAR_MONTH:
@@ -542,7 +547,9 @@ class DestinationStep(QWidget):
         else:  # FLAT
             preview = root / "My Vacation"
         self._preview_label.setText(str(preview))
-        self._preview_label.setStyleSheet("color: #e0e0e0; font-size: 11px; font-style: normal;")
+        self._preview_label.setStyleSheet(
+            "color: #ffb74d; font-family: monospace; font-size: 11px; font-style: normal;"
+        )
 
     # ------------------------------------------------------------------
     # Slots

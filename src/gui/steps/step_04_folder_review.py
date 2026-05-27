@@ -59,7 +59,7 @@ class FolderReviewStep(QWidget):
             "Right-click a row to open it in Windows Explorer."
         )
         subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("color: #aaa;")
+        subtitle.setObjectName("hintLabel")
         layout.addWidget(subtitle)
 
         # Filter bar
@@ -78,7 +78,8 @@ class FolderReviewStep(QWidget):
 
         # Summary bar
         self._summary_label = QLabel("")
-        self._summary_label.setStyleSheet("color: #aaa; padding: 4px 0;")
+        self._summary_label.setObjectName("hintLabel")
+        self._summary_label.setStyleSheet("padding: 4px 0;")
         layout.addWidget(self._summary_label)
 
         # Navigation

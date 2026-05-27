@@ -91,7 +91,8 @@ class TransferSettingsStep(QWidget):
             "_DUPLICATES_REVIEW/ regardless of this setting."
         )
         conflict_note.setWordWrap(True)
-        conflict_note.setStyleSheet("color: #888; font-size: 11px;")
+        conflict_note.setObjectName("hintLabel")
+        conflict_note.setStyleSheet("font-size: 11px;")
         conflict_layout.addWidget(conflict_note)
         left_col.addWidget(conflict_group)
 
@@ -140,7 +141,8 @@ class TransferSettingsStep(QWidget):
             "Hardware profile will appear after you select a destination in Step 4."
         )
         self._hw_label.setWordWrap(True)
-        self._hw_label.setStyleSheet("color: #aaa; font-size: 12px;")
+        self._hw_label.setObjectName("hintLabel")
+        self._hw_label.setStyleSheet("font-size: 12px;")
         hw_layout.addWidget(self._hw_label)
         left_col.addWidget(self._hw_group)
 
@@ -188,7 +190,8 @@ class TransferSettingsStep(QWidget):
             "Fragmentation and file size also affect real-world speeds."
         )
         note.setWordWrap(True)
-        note.setStyleSheet("color: #888; font-size: 10px;")
+        note.setObjectName("hintLabel")
+        note.setStyleSheet("font-size: 10px;")
         vl.addWidget(note)
 
         rows = [

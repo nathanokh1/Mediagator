@@ -96,12 +96,14 @@ class _StatCard(QFrame):
         lay.addWidget(self._val)
 
         lbl = QLabel(label)
-        lbl.setStyleSheet("color: #888; font-size: 11px; border: none;")
+        lbl.setObjectName("hintLabel")
+        lbl.setStyleSheet("font-size: 11px; border: none;")
         lay.addWidget(lbl)
 
         if note:
             note_lbl = QLabel(note)
-            note_lbl.setStyleSheet("color: #666; font-size: 10px; border: none;")
+            note_lbl.setObjectName("hintLabel")
+            note_lbl.setStyleSheet("font-size: 10px; border: none;")
             lay.addWidget(note_lbl)
 
     def set_value(self, value: str) -> None:
@@ -148,7 +150,8 @@ class PreTransferStep(QWidget):
             "finalising the transfer plan.  This usually takes 5–10 seconds."
         )
         subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("color: #aaa; font-size: 12px;")
+        subtitle.setObjectName("hintLabel")
+        subtitle.setStyleSheet("font-size: 12px;")
         root.addWidget(subtitle)
 
         # Status line (shown while running)
@@ -196,7 +199,8 @@ class PreTransferStep(QWidget):
 
         self._phase_detail = QLabel("")
         self._phase_detail.setWordWrap(True)
-        self._phase_detail.setStyleSheet("color: #ccc; font-size: 12px; border: none;")
+        self._phase_detail.setObjectName("hintLabel")
+        self._phase_detail.setStyleSheet("font-size: 12px; border: none;")
         pf_lay.addWidget(self._phase_detail)
 
         self._phase_list_lbl = QLabel("")
