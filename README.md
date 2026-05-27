@@ -31,7 +31,7 @@ MediaMitigator scans your drives for media files, lets you choose exactly what t
 
 ```bash
 # Clone the repo
-git clone https://github.com/nathanokh1/MediaMitagator.git
+git clone https://github.com/nathanokh1/Mediagator.git
 cd MediaMitagator
 
 # Install dependencies

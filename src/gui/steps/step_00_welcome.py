@@ -26,7 +26,7 @@ from src.config.settings import save_settings
 
 logger = logging.getLogger(__name__)
 
-_GITHUB_URL = "https://github.com/your-org/MediaMitigator"   # placeholder
+_GITHUB_URL = "https://github.com/nathanokh1/Mediagator"
 
 
 # ── speed reference data ─────────────────────────────────────────────────────
