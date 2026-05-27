@@ -28,7 +28,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
-OutputDir=..\dist
+OutputDir=C:\Users\Pheonix\Desktop
 OutputBaseFilename=Mediagator_Setup_{#AppVersion}
 SetupIconFile={#IconFile}
 Compression=lzma2/ultra64
@@ -69,7 +69,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 ; Offer to launch after install
-Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent shellexec
 
 [UninstallDelete]
 ; Remove any user data left in AppData on uninstall (optional — comment out to keep user data)
