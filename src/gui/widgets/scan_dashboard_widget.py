@@ -119,9 +119,10 @@ class _StackedBar(QWidget):
         # Legend below bar
         legend_y = bar_y + bar_h + 6
         lx = 0
+        legend_col = self.palette().text().color()
         for label, value, colour in self._segments:
             p.fillRect(lx, legend_y + 2, 12, 10, colour)
-            p.setPen(QPen(_C_DIM))
+            p.setPen(QPen(legend_col))
             p.drawText(lx + 16, legend_y + 11, f"{label}: {value:,}")
             lx += 180
         p.end()
@@ -154,6 +155,10 @@ class _HBarChart(QWidget):
         row_h = 38
         gap = (row_h - bar_h) // 2
 
+        # Use the widget's own palette so text adapts to dark/light theme
+        text_col = self.palette().text().color()
+        dim_col  = self.palette().mid().color()
+
         for i, (label, value) in enumerate(self._items):
             y = i * row_h
             colour = _BAR_COLOURS[i % len(_BAR_COLOURS)]
@@ -161,7 +166,7 @@ class _HBarChart(QWidget):
             bar_w = max(bar_w, 4)
 
             # Label
-            p.setPen(QPen(_C_TEXT))
+            p.setPen(QPen(text_col))
             fm = QFontMetrics(self.font())
             truncated = fm.elidedText(label, Qt.TextElideMode.ElideMiddle, label_w - 8)
             p.drawText(0, y + gap + bar_h - 4, truncated)
@@ -170,7 +175,7 @@ class _HBarChart(QWidget):
             p.fillRect(label_w, y + gap, bar_w, bar_h, colour)
 
             # Value text
-            p.setPen(QPen(_C_DIM))
+            p.setPen(QPen(dim_col))
             val_str = human_readable_size(value) if self._unit == "bytes" else f"{value:,}"
             p.drawText(label_w + bar_w + 6, y + gap + bar_h - 4, val_str)
 
@@ -256,7 +261,8 @@ class ScanDashboardWidget(QWidget):
         )
         note.setWordWrap(True)
         note.setTextFormat(Qt.TextFormat.RichText)
-        note.setStyleSheet("color: #888; font-size: 11px; padding: 2px 0;")
+        note.setObjectName("hintLabel")
+        note.setStyleSheet("font-size: 11px; padding: 2px 0;")
         self._layout.addWidget(note)
 
     def _add_stacked_bar(self, result: ScanResult) -> None:
