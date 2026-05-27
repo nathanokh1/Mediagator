@@ -172,9 +172,12 @@ class DriveInfoWorker(QThread):
                         f"$d = Get-PSDrive -Name '{root.drive[0]}' -ErrorAction SilentlyContinue;"
                         f"if ($d) {{ $d.Description }} else {{ '' }}"
                     )
+                    import sys as _sys
+                    _no_win = subprocess.CREATE_NO_WINDOW if _sys.platform == "win32" else 0
                     r = subprocess.run(
                         ["powershell", "-NoProfile", "-Command", ps],
-                        capture_output=True, text=True, timeout=4
+                        capture_output=True, text=True, timeout=4,
+                        creationflags=_no_win,
                     )
                     label = r.stdout.strip() or root.drive
                 except Exception:

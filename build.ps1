@@ -27,6 +27,11 @@ if ($Clean) {
     Write-Host "      Cleaned."
 }
 
+# Always remove runtime-generated folders from a previous dist before rebuilding.
+# These can have open file handles (e.g. app.log) that cause PyInstaller to fail.
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "dist\Mediagator\logs"
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "dist\Mediagator\reports"
+
 # 2. Install dependencies
 Write-Host ""
 Write-Host "[2/4] Installing requirements..." -ForegroundColor Yellow

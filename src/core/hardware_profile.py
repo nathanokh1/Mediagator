@@ -16,8 +16,13 @@ import ctypes
 import logging
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+# Suppress the console window that would flash when spawning PowerShell/wmic
+# on Windows.  On other platforms the flag doesn't exist so we default to 0.
+_NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +94,8 @@ def _get_drive_type(path: Path) -> str:
         )
         result = subprocess.run(
             ["powershell", "-NoProfile", "-Command", ps],
-            capture_output=True, text=True, timeout=8
+            capture_output=True, text=True, timeout=8,
+            creationflags=_NO_WINDOW,
         )
         output = result.stdout.strip().lower()
         if "ssd" in output:
@@ -113,7 +119,8 @@ def _available_ram_gb() -> float:
         # Fallback: parse 'wmic OS get FreePhysicalMemory'
         r = subprocess.run(
             ["wmic", "OS", "get", "FreePhysicalMemory"],
-            capture_output=True, text=True, timeout=6
+            capture_output=True, text=True, timeout=6,
+            creationflags=_NO_WINDOW,
         )
         lines = [l.strip() for l in r.stdout.splitlines() if l.strip().isdigit()]
         if lines:
@@ -227,7 +234,8 @@ def add_defender_exclusions(paths: list[Path]) -> bool:
             subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  f'Add-MpPreference -ExclusionPath "{p}"'],
-                capture_output=True, timeout=10
+                capture_output=True, timeout=10,
+                creationflags=_NO_WINDOW,
             )
             logger.info("Added Defender exclusion: %s", p)
         return True
@@ -251,7 +259,8 @@ def remove_defender_exclusions(paths: list[Path]) -> None:
             subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  f'Remove-MpPreference -ExclusionPath "{p}"'],
-                capture_output=True, timeout=10
+                capture_output=True, timeout=10,
+                creationflags=_NO_WINDOW,
             )
             logger.info("Removed Defender exclusion: %s", p)
     except Exception as exc:
