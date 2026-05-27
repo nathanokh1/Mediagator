@@ -1,15 +1,54 @@
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.env
-logs/
-reports/
 *.egg-info/
+.eggs/
+.Python
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Build / distribution ───────────────────────────────────────────────────────
 dist/
 build/
+*.spec           # PyInstaller spec (keep your own; ignore generated ones)
+
+# ── Testing & type-checking ────────────────────────────────────────────────────
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ── Application runtime data ───────────────────────────────────────────────────
+logs/
+reports/
 *.log
 settings.json
 session_state.json
+
+# ── Cursor AI workspace files ──────────────────────────────────────────────────
+# These contain AI prompts, rules, and workspace state — not relevant to
+# contributors and should not be public.
+.cursor/
+*.cursorrules
+.cursorignore
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.env
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+*.pem
+*.key
+secrets.*

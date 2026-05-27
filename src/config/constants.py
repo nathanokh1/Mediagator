@@ -171,6 +171,7 @@ WINDOW_MIN_HEIGHT: int = 700
 WINDOW_TITLE: str = "MediaMitigator"
 
 STEP_NAMES: list[str] = [
+    "Welcome",
     "Drive Selection",
     "Initial Scan",
     "Destination",

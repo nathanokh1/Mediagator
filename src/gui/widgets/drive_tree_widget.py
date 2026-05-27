@@ -224,7 +224,7 @@ class DriveTreeWidget(QTreeWidget):
         display = f"  Drive {drive.letter}:  —  {label}"
 
         item = QTreeWidgetItem([display, "Drive", f"Free {free_str} / {total_str}  ({used_pct}% used)"])
-        item.setCheckState(_COL_NAME, Qt.CheckState.Checked)
+        item.setCheckState(_COL_NAME, Qt.CheckState.Unchecked)
         item.setFlags(
             item.flags()
             | Qt.ItemFlag.ItemIsUserCheckable
@@ -245,12 +245,7 @@ class DriveTreeWidget(QTreeWidget):
         item = QTreeWidgetItem([f"  {folder.name}", badge, "…"])
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
 
-        default = (
-            Qt.CheckState.Unchecked
-            if classification == "system"
-            else Qt.CheckState.Checked
-        )
-        item.setCheckState(_COL_NAME, default)
+        item.setCheckState(_COL_NAME, Qt.CheckState.Unchecked)
         item.setForeground(_COL_NAME, QBrush(colour))
         item.setForeground(_COL_TYPE, QBrush(colour))
         item.setData(_COL_NAME, _ROLE_KIND, classification)

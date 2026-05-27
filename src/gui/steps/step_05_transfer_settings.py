@@ -46,12 +46,20 @@ class TransferSettingsStep(QWidget):
     def _build_ui(self) -> None:
         """Construct the step layout."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(24, 24, 24, 16)
         layout.setSpacing(16)
 
         title = QLabel("Transfer Settings")
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(title)
+
+        # Two-column body: settings (left) + speed reference (right)
+        body_row = QHBoxLayout()
+        body_row.setSpacing(20)
+
+        # ── Left column: settings ────────────────────────────────────────
+        left_col = QVBoxLayout()
+        left_col.setSpacing(12)
 
         # 1. Empty folder behavior
         empty_group = QGroupBox("Empty Source Folder Behavior (after successful transfer)")
@@ -64,7 +72,7 @@ class TransferSettingsStep(QWidget):
             empty_layout.addWidget(btn)
             self._btn_group.addButton(btn)
         self._radio_flag.setChecked(True)
-        layout.addWidget(empty_group)
+        left_col.addWidget(empty_group)
 
         # 2. Duplicate behavior info
         dup_group = QGroupBox("Duplicate Behavior")
@@ -73,7 +81,7 @@ class TransferSettingsStep(QWidget):
             "True duplicates (same filename + same EXIF/creation date) will be "
             "moved to [destination]/_DUPLICATES_REVIEW/ for manual review."
         ))
-        layout.addWidget(dup_group)
+        left_col.addWidget(dup_group)
 
         # 3. Notifications
         notif_group = QGroupBox("Notifications")
@@ -101,7 +109,7 @@ class TransferSettingsStep(QWidget):
         email_form.addRow("Password:", self._smtp_password)
         self._email_fields.hide()
         notif_layout.addWidget(self._email_fields)
-        layout.addWidget(notif_group)
+        left_col.addWidget(notif_group)
 
         # 4. Lightroom report
         lr_group = QGroupBox("Lightroom Report")
@@ -111,21 +119,36 @@ class TransferSettingsStep(QWidget):
             "(saves a .txt with all destination folder paths)"
         )
         lr_layout.addWidget(self._lr_cb)
-        layout.addWidget(lr_group)
+        left_col.addWidget(lr_group)
 
         # 5. Hardware profile summary
         self._hw_group = QGroupBox("Detected Hardware & Transfer Tuning")
         hw_layout = QVBoxLayout(self._hw_group)
-        self._hw_label = QLabel("Hardware profile will appear after you select a destination in Step 3.")
+        self._hw_label = QLabel(
+            "Hardware profile will appear after you select a destination in Step 4."
+        )
         self._hw_label.setWordWrap(True)
         self._hw_label.setStyleSheet("color: #aaa; font-size: 12px;")
         hw_layout.addWidget(self._hw_label)
-        layout.addWidget(self._hw_group)
+        left_col.addWidget(self._hw_group)
 
-        layout.addStretch()
+        left_col.addStretch()
+        body_row.addLayout(left_col, stretch=3)
+
+        # ── Right column: speed reference ────────────────────────────────
+        right_col = QVBoxLayout()
+        right_col.setSpacing(8)
+        right_col.addWidget(self._build_speed_reference())
+        right_col.addStretch()
+        body_row.addLayout(right_col, stretch=2)
+
+        layout.addLayout(body_row, stretch=1)
 
         # Navigation
-        nav = QHBoxLayout()
+        nav_widget = QWidget()
+        nav_widget.setObjectName("navBar")
+        nav = QHBoxLayout(nav_widget)
+        nav.setContentsMargins(16, 8, 16, 8)
         back_btn = QPushButton("← Back")
         back_btn.setObjectName("secondaryBtn")
         back_btn.setMinimumWidth(100)
@@ -137,7 +160,57 @@ class TransferSettingsStep(QWidget):
         next_btn.setMinimumWidth(130)
         next_btn.clicked.connect(self._on_next)
         nav.addWidget(next_btn)
-        layout.addLayout(nav)
+        layout.addWidget(nav_widget)
+
+    @staticmethod
+    def _build_speed_reference() -> QGroupBox:
+        """Build the compact transfer-speed reference table."""
+        from PyQt6.QtWidgets import QFrame
+        group = QGroupBox("Transfer Speed Reference")
+        vl = QVBoxLayout(group)
+        vl.setSpacing(4)
+        vl.setContentsMargins(8, 8, 8, 8)
+
+        note = QLabel(
+            "Speed is limited by the <i>slower</i> drive.\n"
+            "Fragmentation and file size also affect real-world speeds."
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #888; font-size: 10px;")
+        vl.addWidget(note)
+
+        rows = [
+            ("HDD → HDD",  "80–120 MB/s",  "~14 min",  "~70 min",  "~2.3 hrs"),
+            ("HDD → SSD",  "80–120 MB/s",  "~14 min",  "~70 min",  "~2.3 hrs"),
+            ("SSD → HDD",  "150–200 MB/s", "~9 min",   "~45 min",  "~1.5 hrs"),
+            ("SSD → SSD",  "400–550 MB/s", "~3 min",   "~17 min",  "~35 min"),
+            ("USB 3.0",    "100–400 MB/s", "varies",   "varies",   "varies"),
+        ]
+        headers = ("Type", "Speed", "100 GB", "500 GB", "1 TB")
+
+        for i, row_data in enumerate([headers] + rows):
+            is_hdr = i == 0
+            row_w = QFrame()
+            row_w.setStyleSheet(
+                "background: #1e1e30;" if is_hdr
+                else ("background: #181828;" if i % 2 == 0 else "background: #131320;")
+            )
+            row_layout = QHBoxLayout(row_w)
+            row_layout.setContentsMargins(6, 4, 6, 4)
+            row_layout.setSpacing(0)
+            widths = [100, 100, 54, 54, 54]
+            for txt, w in zip(row_data, widths):
+                lbl = QLabel(txt)
+                lbl.setFixedWidth(w)
+                if is_hdr:
+                    lbl.setStyleSheet("color: #ff9800; font-weight: bold; font-size: 10px;")
+                else:
+                    lbl.setStyleSheet("color: #ccc; font-size: 10px;")
+                row_layout.addWidget(lbl)
+            row_layout.addStretch()
+            vl.addWidget(row_w)
+
+        return group
 
     def _toggle_email(self, state: int) -> None:
         """Show or hide SMTP fields.

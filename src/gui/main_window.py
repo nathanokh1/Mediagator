@@ -1,7 +1,7 @@
 """
 MediaMitigator — MainWindow.
 
-Hosts the step indicator breadcrumb and the QStackedWidget that
+Hosts the chevron step indicator and the QStackedWidget that
 renders each of the 8 wizard steps.
 
 Author: Nathan
@@ -12,11 +12,12 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QStackedWidget, QFrame,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, QRect, QPointF
+from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF
 
 from src.config.constants import WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES
 from src.gui.wizard_state import WizardState
+from src.gui.steps.step_00_welcome import WelcomeStep
 from src.gui.steps.step_01_drive_selection import DriveSelectionStep
 from src.gui.steps.step_02_initial_scan import InitialScanStep
 from src.gui.steps.step_03_destination import DestinationStep
@@ -75,8 +76,8 @@ class MainWindow(QMainWindow):
         header_layout.addStretch()
         root.addWidget(header)
 
-        # Step breadcrumb
-        self._breadcrumb = _StepBreadcrumb(STEP_NAMES)
+        # Chevron step indicator
+        self._breadcrumb = _ChevronStepper(STEP_NAMES)
         root.addWidget(self._breadcrumb)
 
         # Stacked widget
@@ -86,6 +87,7 @@ class MainWindow(QMainWindow):
         # Build steps
         self._steps: list[QWidget] = []
         self._step_classes = [
+            WelcomeStep,
             DriveSelectionStep,
             InitialScanStep,
             DestinationStep,
@@ -103,7 +105,10 @@ class MainWindow(QMainWindow):
 
         # Wire navigation signals
         self._connect_signals()
-        self._go_to_step(0)
+
+        # Skip welcome if user has opted out
+        start = 1 if self._state.settings.get("welcome_seen", False) else 0
+        self._go_to_step(start)
 
     def _connect_signals(self) -> None:
         """Connect next_requested / back_requested signals for each step."""
@@ -113,10 +118,10 @@ class MainWindow(QMainWindow):
             if hasattr(step, "back_requested"):
                 step.back_requested.connect(lambda idx=i: self._go_to_step(idx - 1))
 
-        # Step 8: start new transfer → return to step 1
-        report_step = self._steps[7]
+        # Step 9 (Report): "Start New Transfer" → back to Drive Selection (step 1)
+        report_step = self._steps[8]
         if hasattr(report_step, "new_transfer_requested"):
-            report_step.new_transfer_requested.connect(lambda: self._go_to_step(0))
+            report_step.new_transfer_requested.connect(lambda: self._go_to_step(1))
 
     def _go_to_step(self, index: int) -> None:
         """Navigate to a wizard step by index.
@@ -135,46 +140,126 @@ class MainWindow(QMainWindow):
             step.refresh()
 
 
-class _StepBreadcrumb(QWidget):
-    """Horizontal step indicator shown at the top of every wizard screen."""
+class _ChevronStepper(QWidget):
+    """Chevron-style step indicator painted directly with QPainter.
 
-    def __init__(self, names: list[str]) -> None:
-        """Initialise the breadcrumb.
+    Each step is a coloured arrow/chevron shape:
+      • Future   – dark slate (#1e1e30), dim text
+      • Completed – green gradient, white text
+      • Active    – orange gradient, bold black text
+    """
 
-        Args:
-            names: Ordered list of step display names.
-        """
-        super().__init__()
-        self.setFixedHeight(40)
-        self.setStyleSheet("background: #121218; border-bottom: 1px solid #2a2a3a;")
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 16, 0)
-        layout.setSpacing(0)
+    _H          = 46        # total widget height in pixels
+    _ARROW      = 18        # horizontal depth of the chevron point
+    _V_PAD      = 5         # vertical inset for the colour fill (gap at top/bottom)
+    _RADIUS     = 3         # corner radius on first/last step
 
-        self._labels: list[QLabel] = []
-        for i, name in enumerate(names):
-            lbl = QLabel(f"{i + 1}. {name}")
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("color: #555; font-size: 11px; padding: 0 8px;")
-            layout.addWidget(lbl)
-            self._labels.append(lbl)
-            if i < len(names) - 1:
-                sep = QLabel("›")
-                sep.setStyleSheet("color: #333; padding: 0 2px;")
-                layout.addWidget(sep)
+    # Short labels that fit comfortably inside a chevron
+    _SHORT = [
+        "Welcome", "Drive Select", "Scan", "Destination",
+        "Review", "Settings", "Analysis", "Transfer", "Report",
+    ]
 
-        layout.addStretch()
+    # Gradient colour pairs (top, bottom) for each state
+    _GRAD_ACTIVE    = ("#ffb74d", "#f57c00")
+    _GRAD_DONE      = ("#66bb6a", "#388e3c")
+    _GRAD_FUTURE    = ("#252538", "#1a1a2e")
+
+    def __init__(self, names: list[str], parent=None) -> None:
+        super().__init__(parent)
+        self._n       = len(names)
+        self._names   = self._SHORT[: self._n]
+        self._active  = 0
+        self.setFixedHeight(self._H)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
 
     def set_active(self, index: int) -> None:
-        """Highlight the active step label.
+        self._active = index
+        self.update()
 
-        Args:
-            index: 0-based active step index.
-        """
-        for i, lbl in enumerate(self._labels):
-            if i == index:
-                lbl.setStyleSheet("color: #ff9800; font-weight: bold; font-size: 11px; padding: 0 8px;")
-            elif i < index:
-                lbl.setStyleSheet("color: #4caf50; font-size: 11px; padding: 0 8px;")
+    # ------------------------------------------------------------------
+
+    def _chevron_poly(self, i: int, x: float, w: float, h: float) -> QPolygonF:
+        """Return the QPolygonF for chevron i."""
+        top    = float(self._V_PAD)
+        bot    = float(h - self._V_PAD)
+        mid    = float(h / 2)
+        a      = float(self._ARROW)
+        left   = x
+        right  = x + w
+
+        if self._n == 1:
+            pts = [(left, top), (right, top), (right, bot), (left, bot)]
+        elif i == 0:
+            # flat left, pointed right
+            pts = [
+                (left, top), (right - a, top), (right, mid),
+                (right - a, bot), (left, bot),
+            ]
+        elif i == self._n - 1:
+            # notched left, flat right
+            pts = [
+                (left, top), (right, top), (right, bot),
+                (left, bot), (left + a, mid),
+            ]
+        else:
+            pts = [
+                (left, top), (right - a, top), (right, mid),
+                (right - a, bot), (left, bot), (left + a, mid),
+            ]
+        return QPolygonF([QPointF(px, py) for px, py in pts])
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        W  = self.width()
+        H  = self.height()
+        sw = W / self._n          # slot width per step
+
+        name_font = QFont()
+        name_font.setPointSize(9)
+
+        for i in range(self._n):
+            x = i * sw
+
+            # ── fill gradient ─────────────────────────────────────────
+            if i < self._active:
+                c1, c2 = self._GRAD_DONE
+                text_col = QColor("#ffffff")
+                name_font.setBold(False)
+            elif i == self._active:
+                c1, c2 = self._GRAD_ACTIVE
+                text_col = QColor("#111111")
+                name_font.setBold(True)
             else:
-                lbl.setStyleSheet("color: #555; font-size: 11px; padding: 0 8px;")
+                c1, c2 = self._GRAD_FUTURE
+                text_col = QColor("#555577")
+                name_font.setBold(False)
+
+            grad = QLinearGradient(x, 0, x, H)
+            grad.setColorAt(0, QColor(c1))
+            grad.setColorAt(1, QColor(c2))
+
+            poly = self._chevron_poly(i, x, sw, H)
+            p.setBrush(grad)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.drawPolygon(poly)
+
+            # 1px dark separator line on left edge (skip first)
+            if i > 0:
+                p.setPen(QPen(QColor("#0d0d18"), 1))
+                p.drawLine(int(x), self._V_PAD, int(x), H - self._V_PAD)
+
+            # ── step name — vertically centred ────────────────────────
+            text_rect = QRect(
+                int(x + (self._ARROW if i > 0 else 4)),
+                0,
+                int(sw - self._ARROW - (0 if i == self._n - 1 else self._ARROW) - 4),
+                H,
+            )
+            p.setFont(name_font)
+            p.setPen(text_col)
+            p.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self._names[i])
+
+        p.end()

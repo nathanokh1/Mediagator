@@ -29,6 +29,7 @@ _DEFAULTS: dict[str, Any] = {
     "email_recipient": "",
     "email_password": "",
     "lightroom_report": False,
+    "welcome_seen": False,              # show welcome screen until user checks "don't show again"
 }
 
 

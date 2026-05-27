@@ -73,10 +73,10 @@ class DriveSelectionStep(QWidget):
         layout.addWidget(title)
 
         subtitle = QLabel(
-            "Expand each drive to choose folders.  "
-            "<span style='color:#4caf50'>📷 Media</span> folders are pre-selected.  "
-            "<span style='color:#616161'>⚙ System</span> folders are pre-deselected.  "
-            "Then pick which file types to include."
+            "Expand each drive to choose folders, then click the ones you want to scan.  "
+            "Use <b>Smart Select</b> to auto-check likely media folders.  "
+            "<span style='color:#4caf50'>📷 Media</span> — personal photos/videos.  "
+            "<span style='color:#616161'>⚙ System</span> — OS/app folders, skip these."
         )
         subtitle.setWordWrap(True)
         subtitle.setTextFormat(Qt.TextFormat.RichText)

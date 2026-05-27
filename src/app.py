@@ -10,9 +10,12 @@ Author: Nathan
 import logging
 import sys
 
+from pathlib import Path
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtGui import QPalette, QColor, QIcon
 from PyQt6.QtCore import Qt
+
+_ICON_PATH = Path(__file__).resolve().parent.parent / "assets" / "icon.ico"
 
 from src.utils.logger import setup_logging, shutdown_logging
 from src.config.settings import load_settings
@@ -207,6 +210,8 @@ def run() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("MediaMitigator")
     app.setOrganizationName("Nathan")
+    if _ICON_PATH.exists():
+        app.setWindowIcon(QIcon(str(_ICON_PATH)))
 
     _apply_dark_palette(app)
 
