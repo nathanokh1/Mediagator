@@ -471,7 +471,7 @@ class DestinationStep(QWidget):
 
         # ── Fixed nav bar ──────────────────────────────────────────────
         nav_widget = QWidget()
-        nav_widget.setStyleSheet("background: #1a1a2e; border-top: 1px solid #2a2a3e;")
+        nav_widget.setObjectName("navBar")
         nav = QHBoxLayout(nav_widget)
         nav.setContentsMargins(24, 10, 24, 10)
         self._back_btn = QPushButton("← Back")
