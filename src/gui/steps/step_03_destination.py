@@ -300,11 +300,35 @@ class DestinationStep(QWidget):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
+        # Outer layout: scrollable content + fixed nav bar at bottom
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
 
-        # Title
+        # ── Scrollable content area ────────────────────────────────────
+        page_scroll = QScrollArea()
+        page_scroll.setWidgetResizable(True)
+        page_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        page_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        page_scroll.setStyleSheet("""
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:vertical {
+                width: 8px; background: #1a1a2e; border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: #444466; border-radius: 4px; min-height: 20px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+        """)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(24, 20, 24, 12)
+        layout.setSpacing(12)
+        page_scroll.setWidget(content)
+        outer.addWidget(page_scroll, stretch=1)
+
+        # ── Title ─────────────────────────────────────────────────────
         title = QLabel("Choose Destination Folder")
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(title)
@@ -317,20 +341,21 @@ class DestinationStep(QWidget):
         subtitle.setStyleSheet("color: #aaa;")
         layout.addWidget(subtitle)
 
-        # ── Quick-select drive panel ───────────────────────────────────
-        drives_group = QGroupBox("Quick Select — Available Drives")
+        # ── Available Drives ──────────────────────────────────────────
+        drives_group = QGroupBox("Available Drives")
         drives_outer = QVBoxLayout(drives_group)
+        drives_outer.setSpacing(6)
 
         self._drives_hint = QLabel("Scanning available drives…")
         self._drives_hint.setStyleSheet("color: #888; font-size: 11px;")
         drives_outer.addWidget(self._drives_hint)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setFixedHeight(190)
-        scroll.setStyleSheet("""
+        cards_scroll = QScrollArea()
+        cards_scroll.setWidgetResizable(True)
+        cards_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        cards_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        cards_scroll.setFixedHeight(162)
+        cards_scroll.setStyleSheet("""
             QScrollArea { border: none; background: transparent; }
             QScrollBar:horizontal {
                 height: 8px; background: #1a1a2e; border-radius: 4px;
@@ -343,16 +368,17 @@ class DestinationStep(QWidget):
 
         self._cards_container = QWidget()
         self._cards_layout = QHBoxLayout(self._cards_container)
-        self._cards_layout.setContentsMargins(0, 4, 0, 4)
+        self._cards_layout.setContentsMargins(2, 2, 2, 2)
         self._cards_layout.setSpacing(10)
         self._cards_layout.addStretch()
-        scroll.setWidget(self._cards_container)
-        drives_outer.addWidget(scroll)
+        cards_scroll.setWidget(self._cards_container)
+        drives_outer.addWidget(cards_scroll)
         layout.addWidget(drives_group)
 
-        # ── Folder picker ─────────────────────────────────────────────
+        # ── Destination folder picker ──────────────────────────────────
         picker_group = QGroupBox("Destination Folder")
         picker_layout = QVBoxLayout(picker_group)
+        picker_layout.setSpacing(6)
 
         path_row = QHBoxLayout()
         self._path_edit = QLineEdit()
@@ -374,39 +400,41 @@ class DestinationStep(QWidget):
         picker_layout.addWidget(self._space_label)
         layout.addWidget(picker_group)
 
-        # ── Organisation mode ─────────────────────────────────────────
+        # ── Organisation mode ──────────────────────────────────────────
         org_group = QGroupBox("Organisation Mode")
         org_layout = QVBoxLayout(org_group)
-        org_layout.setSpacing(10)
+        org_layout.setSpacing(6)
+        org_layout.setContentsMargins(10, 8, 10, 8)
 
         self._mode_group = QButtonGroup(self)
-        descriptions = {
-            OrgMode.YEAR_MONTH: (
-                "Organise by Year › Month  (recommended)",
-                "Folders are placed in <b>dest / 2024 / 06-June / Folder Name</b>.<br>"
-                "Great for large collections — easy to browse by date.",
-            ),
-            OrgMode.YEAR_ONLY: (
-                "Organise by Year only",
-                "Folders are placed in <b>dest / 2024 / Folder Name</b>.<br>"
-                "Matches an existing year-based folder structure.",
-            ),
-            OrgMode.FLAT: (
-                "No reorganisation  —  copy as-is",
-                "Folders land directly at <b>dest / Folder Name</b>.<br>"
-                "Original folder names are preserved; no date hierarchy is added.",
-            ),
-        }
+        modes = [
+            (OrgMode.YEAR_MONTH, "Year / Month  (recommended)",
+             "dest \\ 2024 \\ 06-June \\ Folder Name"),
+            (OrgMode.YEAR_ONLY,  "Year only",
+             "dest \\ 2024 \\ Folder Name"),
+            (OrgMode.FLAT,       "No reorganisation — copy as-is",
+             "dest \\ Folder Name"),
+        ]
+        for idx, (mode, label, example) in enumerate(modes):
+            row = QHBoxLayout()
+            row.setSpacing(10)
+            radio = QRadioButton(label)
+            radio.setStyleSheet("font-size: 13px; color: #e0e0e0;")
+            self._mode_group.addButton(radio, idx)
+            radio.toggled.connect(self._on_mode_changed)
+            row.addWidget(radio)
+            row.addStretch()
+            ex_lbl = QLabel(example)
+            ex_lbl.setStyleSheet(
+                "color: #666; font-size: 11px; font-family: monospace;"
+            )
+            row.addWidget(ex_lbl)
+            org_layout.addLayout(row)
 
-        for idx, mode in enumerate(self._MODE_IDS):
-            radio_label, detail_text = descriptions[mode]
-            row_widget = self._make_mode_row(idx, mode, radio_label, detail_text)
-            org_layout.addWidget(row_widget)
-
-        # Live path preview
+        # Preview line
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("border: 1px solid #333;")
+        sep.setStyleSheet("color: #333;")
         org_layout.addWidget(sep)
 
         preview_row = QHBoxLayout()
@@ -420,12 +448,12 @@ class DestinationStep(QWidget):
         preview_row.addWidget(preview_lbl)
         preview_row.addWidget(self._preview_label, stretch=1)
         org_layout.addLayout(preview_row)
-
         layout.addWidget(org_group)
 
-        # ── Probe status ──────────────────────────────────────────────
+        # ── Probe status ───────────────────────────────────────────────
         probe_group = QGroupBox("Resolving Destination Paths")
         probe_layout = QVBoxLayout(probe_group)
+        probe_layout.setSpacing(4)
 
         self._probe_bar = QProgressBar()
         self._probe_bar.setRange(0, 100)
@@ -441,8 +469,11 @@ class DestinationStep(QWidget):
 
         layout.addStretch()
 
-        # ── Navigation ────────────────────────────────────────────────
-        nav = QHBoxLayout()
+        # ── Fixed nav bar ──────────────────────────────────────────────
+        nav_widget = QWidget()
+        nav_widget.setStyleSheet("background: #1a1a2e; border-top: 1px solid #2a2a3e;")
+        nav = QHBoxLayout(nav_widget)
+        nav.setContentsMargins(24, 10, 24, 10)
         self._back_btn = QPushButton("← Back")
         self._back_btn.setObjectName("secondaryBtn")
         self._back_btn.setMinimumWidth(100)
@@ -455,47 +486,12 @@ class DestinationStep(QWidget):
         self._next_btn.setEnabled(False)
         self._next_btn.clicked.connect(self._on_next)
         nav.addWidget(self._next_btn)
-        layout.addLayout(nav)
+        outer.addWidget(nav_widget)
 
         # Initialise selection
         self._apply_initial_mode()
         self._refresh_preview()
 
-    def _make_mode_row(
-        self, idx: int, mode: str, radio_label: str, detail_text: str
-    ) -> QWidget:
-        """Build one radio button row with icon, title, and detail text."""
-        container = QWidget()
-        container.setStyleSheet(
-            "QWidget { border: 1px solid #2a2a3e; border-radius: 6px; padding: 4px; }"
-        )
-        row = QHBoxLayout(container)
-        row.setContentsMargins(10, 8, 10, 8)
-        row.setSpacing(12)
-
-        radio = QRadioButton()
-        radio.setStyleSheet("QRadioButton::indicator { width: 16px; height: 16px; }")
-        self._mode_group.addButton(radio, idx)
-        radio.toggled.connect(self._on_mode_changed)
-        row.addWidget(radio)
-
-        text_col = QVBoxLayout()
-        text_col.setSpacing(2)
-
-        title_lbl = QLabel(radio_label)
-        title_lbl.setStyleSheet(
-            "font-weight: bold; font-size: 13px; color: #e0e0e0; border: none;"
-        )
-        text_col.addWidget(title_lbl)
-
-        detail_lbl = QLabel(detail_text)
-        detail_lbl.setWordWrap(True)
-        detail_lbl.setTextFormat(Qt.TextFormat.RichText)
-        detail_lbl.setStyleSheet("color: #888; font-size: 11px; border: none;")
-        text_col.addWidget(detail_lbl)
-
-        row.addLayout(text_col, stretch=1)
-        return container
 
     def _apply_initial_mode(self) -> None:
         """Set the radio selection from the current WizardState org_mode."""
