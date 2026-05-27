@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QFrame,
 )
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt
 
@@ -65,6 +65,25 @@ class TransferProgressStep(QWidget):
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(title)
 
+        # ── Status banners (Defender + free space) ───────────────────────
+        self._defender_banner = QLabel("")
+        self._defender_banner.setWordWrap(True)
+        self._defender_banner.setStyleSheet(
+            "background: #1a2e1a; color: #81c784; border: 1px solid #2e5c2e; "
+            "border-radius: 4px; padding: 4px 10px; font-size: 11px;"
+        )
+        self._defender_banner.hide()
+        layout.addWidget(self._defender_banner)
+
+        self._space_banner = QLabel("")
+        self._space_banner.setWordWrap(True)
+        self._space_banner.setStyleSheet(
+            "background: #2e1a1a; color: #ef9a9a; border: 1px solid #5c2e2e; "
+            "border-radius: 4px; padding: 4px 10px; font-size: 11px;"
+        )
+        self._space_banner.hide()
+        layout.addWidget(self._space_banner)
+
         # Phase indicator
         self._phase_label = QLabel("")
         self._phase_label.setStyleSheet("color: #ff9800; font-weight: bold;")
@@ -94,7 +113,11 @@ class TransferProgressStep(QWidget):
     def refresh(self) -> None:
         """Start the transfer when the step becomes visible."""
         self._cancel_event.clear()
+        self._cancel_btn.setText("Cancel Transfer")
+        self._cancel_btn.setEnabled(True)
         self._error_panel.clear_errors()
+        self._defender_banner.hide()
+        self._space_banner.hide()
         self._start_time = time.monotonic()
 
         plan = self._state.transfer_plan
@@ -118,8 +141,36 @@ class TransferProgressStep(QWidget):
             added = add_defender_exclusions(self._defender_paths)
             if added:
                 logger.info("Defender exclusions active for %d paths", len(self._defender_paths))
+                self._defender_banner.setText(
+                    "🛡  Windows Defender exclusions active — source and destination paths "
+                    "are excluded from real-time scanning for this transfer."
+                )
+                self._defender_banner.show()
             else:
                 logger.info("Defender exclusions not added (not admin or unavailable)")
+                self._defender_banner.hide()
+        else:
+            self._defender_banner.hide()
+
+        # ── Free space warning ────────────────────────────────────────────
+        self._space_banner.hide()
+        dest = self._state.destination_root
+        plan = self._state.transfer_plan
+        if dest and plan:
+            try:
+                import psutil
+                usage = psutil.disk_usage(str(dest))
+                needed = plan.total_size_bytes
+                if usage.free < needed:
+                    from src.utils.file_utils import human_readable_size
+                    self._space_banner.setText(
+                        f"⚠  Low disk space — destination has "
+                        f"{human_readable_size(usage.free)} free but transfer needs "
+                        f"~{human_readable_size(needed)}.  Transfer may fail partway through."
+                    )
+                    self._space_banner.show()
+            except Exception:
+                pass
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         transfer_logger = get_transfer_logger(ts)

@@ -38,9 +38,13 @@ def resolve_destination(
 
     The layout depends on *org_mode*:
 
-    * ``OrgMode.YEAR_MONTH`` (default) — ``[dest]/YYYY/MM-MonthName/FolderName/``
-    * ``OrgMode.YEAR_ONLY``            — ``[dest]/YYYY/FolderName/``
-    * ``OrgMode.FLAT``                 — ``[dest]/FolderName/``
+    * ``OrgMode.YEAR_MONTH``  — ``[dest]/YYYY/MM-MonthName/FolderName/``
+    * ``OrgMode.YEAR_ONLY``   — ``[dest]/YYYY/FolderName/``
+    * ``OrgMode.EVENT_YEAR``  — ``[dest]/YYYY/FolderName/``  (alias of YEAR_ONLY,
+                                  emphasises preserving your existing folder name)
+    * ``OrgMode.FLAT``        — ``[dest]/FolderName/``
+    * ``OrgMode.FILE_DATE``   — ``[dest]/YYYY/MM-MonthName/``  (no folder name;
+                                  individual files are placed directly in date folder)
 
     Args:
         node: Source folder node (must have ``majority_year`` / ``majority_month``
@@ -58,12 +62,17 @@ def resolve_destination(
 
     year = node.majority_year or 0
 
-    if org_mode == OrgMode.YEAR_ONLY:
+    if org_mode in (OrgMode.YEAR_ONLY, OrgMode.EVENT_YEAR):
         return dest_root / str(year) / name
 
-    # Default: YEAR_MONTH
     month = node.majority_month or 1
     month_str = month_folder_name(month)
+
+    if org_mode == OrgMode.FILE_DATE:
+        # Files from this folder land directly in the date directory — no subfolder
+        return dest_root / str(year) / month_str
+
+    # Default: YEAR_MONTH
     return dest_root / str(year) / month_str / name
 
 

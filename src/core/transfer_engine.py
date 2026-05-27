@@ -17,7 +17,7 @@ from typing import Any
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from src.config.constants import DUPLICATE_FOLDER_NAME, MEDIA_EXTENSIONS
+from src.config.constants import DUPLICATE_FOLDER_NAME, MEDIA_EXTENSIONS, ConflictBehavior
 from src.core.duplicate_detector import is_duplicate
 from src.core.hardware_profile import HardwareProfile
 from src.models.folder_node import FolderNode, FolderStatus
@@ -228,6 +228,8 @@ class TransferWorker(QThread):
         total = self._plan.total_files
         done = self._stats.files_completed
 
+        conflict_mode = self._settings.get("conflict_behavior", ConflictBehavior.RENAME)
+
         # Duplicate check against existing destination
         if dest.exists():
             dup, method = is_duplicate(src, dest)
@@ -263,13 +265,31 @@ class TransferWorker(QThread):
                     self._emit_progress(src, dup_dest, start_time)
                 return
 
-            # Same name, different date — rename
-            dest = next_available_path(dest)
-            self._stats.renamed_files.append((src, dest))
-            log_operation(
-                self._transfer_logger, logging.WARNING,
-                "RENAME", src, dest, src.stat().st_size, "RENAMED", "",
-            )
+            # Not a true duplicate — apply conflict_behavior
+            if conflict_mode == ConflictBehavior.SKIP:
+                self._stats.files_completed += 1
+                self._stats.files_remaining -= 1
+                log_operation(
+                    self._transfer_logger, logging.INFO,
+                    "SKIP", src, dest, src.stat().st_size, "SKIPPED", "file exists at dest",
+                )
+                self.item_completed.emit(str(src), str(dest), "SKIPPED")
+                self._emit_progress(src, dest, start_time)
+                return
+            elif conflict_mode == ConflictBehavior.OVERWRITE:
+                log_operation(
+                    self._transfer_logger, logging.WARNING,
+                    "OVERWRITE", src, dest, src.stat().st_size, "OVERWRITING", "",
+                )
+                # dest.exists() — we proceed to copy below; safe_copy will overwrite
+            else:
+                # Default: RENAME
+                dest = next_available_path(dest)
+                self._stats.renamed_files.append((src, dest))
+                log_operation(
+                    self._transfer_logger, logging.WARNING,
+                    "RENAME", src, dest, src.stat().st_size, "RENAMED", "",
+                )
 
         size = src.stat().st_size
         if safe_copy(src, dest, buffer=self._copy_buffer):

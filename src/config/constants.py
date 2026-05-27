@@ -25,42 +25,95 @@ MEDIA_EXTENSIONS: set[str] = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 # File type groups — used by the FileTypeFilterWidget in Step 1.
 # Each entry: label shown in UI, list of extensions, default checked state.
 # ---------------------------------------------------------------------------
+AUDIO_EXTENSIONS: set[str] = {
+    ".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".wma", ".opus", ".aiff", ".aif",
+}
+
+CREATIVE_EXTENSIONS: set[str] = {
+    ".psd", ".psb", ".ai", ".eps", ".indd", ".indt", ".xcf",
+    ".afphoto", ".afdesign", ".sketch", ".fig",
+}
+
+DOCUMENT_EXTENSIONS: set[str] = {
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".txt", ".rtf", ".odt", ".ods", ".odp",
+}
+
+ALL_EXTENSIONS: set[str] = (
+    MEDIA_EXTENSIONS | AUDIO_EXTENSIONS | CREATIVE_EXTENSIONS | DOCUMENT_EXTENSIONS
+)
+
 FILE_TYPE_GROUPS: list[dict] = [
     {
         "name": "📷  Photos",
         "id": "photos",
         "items": [
-            {"label": "JPG / JPEG",       "exts": [".jpg", ".jpeg"],       "default": True},
-            {"label": "PNG",              "exts": [".png"],                "default": True},
-            {"label": "HEIC  (iPhone)",   "exts": [".heic"],               "default": True},
-            {"label": "GIF",              "exts": [".gif"],                "default": True},
-            {"label": "WEBP",             "exts": [".webp"],               "default": True},
-            {"label": "BMP",              "exts": [".bmp"],                "default": True},
+            {"label": "JPG / JPEG",       "exts": [".jpg", ".jpeg"],        "default": True},
+            {"label": "PNG",              "exts": [".png"],                 "default": True},
+            {"label": "HEIC  (iPhone)",   "exts": [".heic"],                "default": True},
+            {"label": "GIF",              "exts": [".gif"],                 "default": True},
+            {"label": "WEBP",             "exts": [".webp"],                "default": True},
+            {"label": "BMP",              "exts": [".bmp"],                 "default": True},
         ],
     },
     {
         "name": "📸  RAW / Professional",
         "id": "raw",
         "items": [
-            {"label": "RAW",              "exts": [".raw"],                "default": True},
-            {"label": "CR2 / CR3  (Canon)","exts": [".cr2", ".cr3"],      "default": True},
-            {"label": "NEF  (Nikon)",     "exts": [".nef"],               "default": True},
-            {"label": "ARW  (Sony)",      "exts": [".arw"],               "default": True},
-            {"label": "DNG  (Adobe)",     "exts": [".dng"],               "default": True},
-            {"label": "TIFF / TIF",       "exts": [".tiff", ".tif"],      "default": True},
+            {"label": "RAW",               "exts": [".raw"],                "default": True},
+            {"label": "CR2 / CR3  (Canon)","exts": [".cr2", ".cr3"],        "default": True},
+            {"label": "NEF  (Nikon)",      "exts": [".nef"],                "default": True},
+            {"label": "ARW  (Sony)",       "exts": [".arw"],                "default": True},
+            {"label": "DNG  (Adobe)",      "exts": [".dng"],                "default": True},
+            {"label": "TIFF / TIF",        "exts": [".tiff", ".tif"],       "default": True},
         ],
     },
     {
         "name": "🎬  Videos",
         "id": "videos",
         "items": [
-            {"label": "MP4",              "exts": [".mp4"],                "default": True},
-            {"label": "MOV  (Apple)",     "exts": [".mov"],               "default": True},
-            {"label": "AVI",              "exts": [".avi"],                "default": True},
-            {"label": "MKV",              "exts": [".mkv"],                "default": True},
-            {"label": "MTS / M2TS  (Camcorder)", "exts": [".mts", ".m2ts"], "default": True},
-            {"label": "MXF  (Professional)",     "exts": [".mxf"],         "default": True},
-            {"label": "LRV / THM  (GoPro proxy)","exts": [".lrv", ".thm"],"default": True},
+            {"label": "MP4",               "exts": [".mp4"],                "default": True},
+            {"label": "MOV  (Apple)",      "exts": [".mov"],                "default": True},
+            {"label": "AVI",               "exts": [".avi"],                "default": True},
+            {"label": "MKV",               "exts": [".mkv"],                "default": True},
+            {"label": "MTS / M2TS  (Camcorder)",  "exts": [".mts", ".m2ts"],"default": True},
+            {"label": "MXF  (Professional)",      "exts": [".mxf"],          "default": True},
+            {"label": "LRV / THM  (GoPro proxy)", "exts": [".lrv", ".thm"], "default": True},
+        ],
+    },
+    {
+        "name": "🎵  Audio",
+        "id": "audio",
+        "items": [
+            {"label": "MP3",               "exts": [".mp3"],                "default": False},
+            {"label": "WAV",               "exts": [".wav"],                "default": False},
+            {"label": "FLAC",              "exts": [".flac"],               "default": False},
+            {"label": "AAC / M4A",         "exts": [".aac", ".m4a"],        "default": False},
+            {"label": "OGG / OPUS",        "exts": [".ogg", ".opus"],       "default": False},
+            {"label": "WMA",               "exts": [".wma"],                "default": False},
+            {"label": "AIFF / AIF",        "exts": [".aiff", ".aif"],       "default": False},
+        ],
+    },
+    {
+        "name": "🎨  Creative Files",
+        "id": "creative",
+        "items": [
+            {"label": "PSD / PSB  (Photoshop)",   "exts": [".psd", ".psb"],         "default": False},
+            {"label": "AI / EPS  (Illustrator)",  "exts": [".ai", ".eps"],          "default": False},
+            {"label": "INDD  (InDesign)",          "exts": [".indd", ".indt"],       "default": False},
+            {"label": "XCF  (GIMP)",               "exts": [".xcf"],                 "default": False},
+            {"label": "Affinity Photo / Design",   "exts": [".afphoto", ".afdesign"],"default": False},
+        ],
+    },
+    {
+        "name": "📄  Documents",
+        "id": "documents",
+        "items": [
+            {"label": "PDF",               "exts": [".pdf"],                "default": False},
+            {"label": "Word  (DOC/DOCX)",  "exts": [".doc", ".docx"],       "default": False},
+            {"label": "Excel  (XLS/XLSX)", "exts": [".xls", ".xlsx"],       "default": False},
+            {"label": "PowerPoint",        "exts": [".ppt", ".pptx"],       "default": False},
+            {"label": "Text / RTF",        "exts": [".txt", ".rtf"],        "default": False},
         ],
     },
 ]
@@ -72,17 +125,32 @@ DEFAULT_SELECTED_EXTENSIONS: set[str] = MEDIA_EXTENSIONS.copy()
 # ---------------------------------------------------------------------------
 class OrgMode:
     """Organisation mode identifiers."""
-    YEAR_MONTH = "year_month"   # dest/2024/06-June/FolderName/
-    YEAR_ONLY  = "year_only"    # dest/2024/FolderName/
-    FLAT       = "flat"         # dest/FolderName/  (no date hierarchy)
+    YEAR_MONTH  = "year_month"   # dest/2024/06-June/FolderName/
+    YEAR_ONLY   = "year_only"    # dest/2024/FolderName/
+    EVENT_YEAR  = "event_year"   # dest/FolderName/  grouped under year as subfolder
+    FLAT        = "flat"         # dest/FolderName/  (no date hierarchy)
+    FILE_DATE   = "file_date"    # dest/2024/06-June/filename.jpg (flatten & re-sort by individual EXIF)
 
 ORG_MODE_LABELS: dict[str, str] = {
-    OrgMode.YEAR_MONTH: "Year / Month  —  2024 › 06-June › Folder Name",
-    OrgMode.YEAR_ONLY:  "Year only     —  2024 › Folder Name",
-    OrgMode.FLAT:       "No reorganisation  —  Folder Name  (copy as-is)",
+    OrgMode.YEAR_MONTH: "Year / Month      —  2024 › 06-June › Folder Name",
+    OrgMode.YEAR_ONLY:  "Year only         —  2024 › Folder Name",
+    OrgMode.EVENT_YEAR: "Event under Year  —  2024 › My Event Name  (keeps your folder names)",
+    OrgMode.FLAT:       "No reorganisation —  Folder Name  (copy as-is)",
+    OrgMode.FILE_DATE:  "Flatten by Date   —  2024 › 06-June › filename.jpg  (re-sorts individual files by EXIF)",
 }
 
 DEFAULT_ORG_MODE: str = OrgMode.YEAR_MONTH
+
+# ---------------------------------------------------------------------------
+# Conflict resolution — what to do when a file already exists at destination.
+# ---------------------------------------------------------------------------
+class ConflictBehavior:
+    """Conflict resolution mode identifiers."""
+    RENAME    = "rename"     # append _1, _2 … to filename (safe default)
+    SKIP      = "skip"       # leave destination untouched, skip source
+    OVERWRITE = "overwrite"  # replace destination file unconditionally
+
+DEFAULT_CONFLICT_BEHAVIOR: str = ConflictBehavior.RENAME
 
 # ---------------------------------------------------------------------------
 # Default folder exclusions (case-insensitive match against folder name)

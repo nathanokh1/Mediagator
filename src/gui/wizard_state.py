@@ -40,7 +40,7 @@ class WizardState:
     selected_extensions: set[str] = field(default_factory=lambda: set(DEFAULT_SELECTED_EXTENSIONS))
     scan_result: ScanResult | None = None
     destination_root: Path | None = None
-    org_mode: str = DEFAULT_ORG_MODE
+    org_mode: str = ""          # empty = not yet chosen; set when user picks a mode
     hardware_profile: HardwareProfile | None = None
     transfer_plan: TransferPlan | None = None
     transfer_stats: TransferStats | None = None

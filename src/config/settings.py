@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.config.constants import APPDATA_DIR, SETTINGS_FILE, DEFAULT_EXCLUSIONS
+from src.config.constants import APPDATA_DIR, SETTINGS_FILE, DEFAULT_EXCLUSIONS, DEFAULT_CONFLICT_BEHAVIOR
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ _DEFAULTS: dict[str, Any] = {
     "email_password": "",
     "lightroom_report": False,
     "welcome_seen": False,              # show welcome screen until user checks "don't show again"
+    "conflict_behavior": DEFAULT_CONFLICT_BEHAVIOR,  # rename | skip | overwrite
 }
 
 

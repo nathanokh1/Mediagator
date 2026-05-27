@@ -17,6 +17,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from src.gui.wizard_state import WizardState
 from src.config.settings import save_settings
+from src.config.constants import ConflictBehavior
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +75,25 @@ class TransferSettingsStep(QWidget):
         self._radio_flag.setChecked(True)
         left_col.addWidget(empty_group)
 
-        # 2. Duplicate behavior info
-        dup_group = QGroupBox("Duplicate Behavior")
-        dup_layout = QVBoxLayout(dup_group)
-        dup_layout.addWidget(QLabel(
-            "True duplicates (same filename + same EXIF/creation date) will be "
-            "moved to [destination]/_DUPLICATES_REVIEW/ for manual review."
-        ))
-        left_col.addWidget(dup_group)
+        # 2. Conflict resolution
+        conflict_group = QGroupBox("When a File Already Exists at Destination")
+        conflict_layout = QVBoxLayout(conflict_group)
+        self._conflict_btn_group = QButtonGroup(self)
+        self._radio_rename    = QRadioButton("Rename  — add _1, _2 … to the filename  (safe default)")
+        self._radio_skip      = QRadioButton("Skip  — leave destination file unchanged, skip source")
+        self._radio_overwrite = QRadioButton("Overwrite  — replace destination file unconditionally")
+        for btn in (self._radio_rename, self._radio_skip, self._radio_overwrite):
+            conflict_layout.addWidget(btn)
+            self._conflict_btn_group.addButton(btn)
+        self._radio_rename.setChecked(True)
+        conflict_note = QLabel(
+            "True duplicates (same name + date) are always flagged to "
+            "_DUPLICATES_REVIEW/ regardless of this setting."
+        )
+        conflict_note.setWordWrap(True)
+        conflict_note.setStyleSheet("color: #888; font-size: 11px;")
+        conflict_layout.addWidget(conflict_note)
+        left_col.addWidget(conflict_group)
 
         # 3. Notifications
         notif_group = QGroupBox("Notifications")
@@ -230,6 +242,13 @@ class TransferSettingsStep(QWidget):
         else:
             s["empty_folder_behavior"] = "flag"
 
+        if self._radio_skip.isChecked():
+            s["conflict_behavior"] = ConflictBehavior.SKIP
+        elif self._radio_overwrite.isChecked():
+            s["conflict_behavior"] = ConflictBehavior.OVERWRITE
+        else:
+            s["conflict_behavior"] = ConflictBehavior.RENAME
+
         s["toast_notifications"] = self._toast_cb.isChecked()
         s["email_notifications"] = self._email_cb.isChecked()
         s["email_host"] = self._smtp_host.text().strip()
@@ -282,6 +301,14 @@ class TransferSettingsStep(QWidget):
             self._radio_leave.setChecked(True)
         else:
             self._radio_flag.setChecked(True)
+
+        conflict = s.get("conflict_behavior", ConflictBehavior.RENAME)
+        if conflict == ConflictBehavior.SKIP:
+            self._radio_skip.setChecked(True)
+        elif conflict == ConflictBehavior.OVERWRITE:
+            self._radio_overwrite.setChecked(True)
+        else:
+            self._radio_rename.setChecked(True)
 
         self._toast_cb.setChecked(s.get("toast_notifications", True))
         self._email_cb.setChecked(s.get("email_notifications", False))

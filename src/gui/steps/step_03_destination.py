@@ -284,7 +284,7 @@ class DestinationStep(QWidget):
     back_requested = pyqtSignal()
 
     # Maps radio button id → OrgMode constant
-    _MODE_IDS = [OrgMode.YEAR_MONTH, OrgMode.YEAR_ONLY, OrgMode.FLAT]
+    _MODE_IDS = [OrgMode.YEAR_MONTH, OrgMode.YEAR_ONLY, OrgMode.EVENT_YEAR, OrgMode.FILE_DATE, OrgMode.FLAT]
 
     def __init__(self, state: WizardState, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -408,11 +408,15 @@ class DestinationStep(QWidget):
 
         self._mode_group = QButtonGroup(self)
         modes = [
-            (OrgMode.YEAR_MONTH, "Year / Month  (recommended)",
+            (OrgMode.YEAR_MONTH,  "Year / Month  (recommended)",
              "dest \\ 2024 \\ 06-June \\ Folder Name"),
-            (OrgMode.YEAR_ONLY,  "Year only",
+            (OrgMode.YEAR_ONLY,   "Year only",
              "dest \\ 2024 \\ Folder Name"),
-            (OrgMode.FLAT,       "No reorganisation — copy as-is",
+            (OrgMode.EVENT_YEAR,  "Event under Year  — keeps your folder names",
+             "dest \\ 2024 \\ Bali Trip"),
+            (OrgMode.FILE_DATE,   "Flatten by Date  — re-sorts individual files by EXIF",
+             "dest \\ 2024 \\ 06-June \\ photo.jpg"),
+            (OrgMode.FLAT,        "No reorganisation — copy as-is",
              "dest \\ Folder Name"),
         ]
         for idx, (mode, label, example) in enumerate(modes):
@@ -488,30 +492,54 @@ class DestinationStep(QWidget):
         nav.addWidget(self._next_btn)
         outer.addWidget(nav_widget)
 
-        # Initialise selection
+        # Restore previous mode (if any) without triggering a probe
         self._apply_initial_mode()
         self._refresh_preview()
+        self._update_next_btn()
 
 
     def _apply_initial_mode(self) -> None:
-        """Set the radio selection from the current WizardState org_mode."""
+        """Restore a previously saved org_mode — does nothing if none was chosen."""
         mode = self._state.org_mode
-        idx = self._MODE_IDS.index(mode) if mode in self._MODE_IDS else 0
+        if mode not in self._MODE_IDS:
+            # No previous choice — leave all radio buttons unchecked
+            self._mode_group.setExclusive(False)
+            for btn in self._mode_group.buttons():
+                btn.setChecked(False)
+            self._mode_group.setExclusive(True)
+            return
+        idx = self._MODE_IDS.index(mode)
         btn = self._mode_group.button(idx)
         if btn:
             btn.setChecked(True)
 
+    def _update_next_btn(self) -> None:
+        """Enable Next only when destination AND org mode are both chosen."""
+        dest_ok = bool(self._state.destination_root)
+        mode_ok = self._state.org_mode in self._MODE_IDS
+        probe_done = not (self._probe_worker and self._probe_worker.isRunning())
+        self._next_btn.setEnabled(dest_ok and mode_ok and probe_done)
+
     def _refresh_preview(self) -> None:
         """Update the live path preview label with a native Windows path."""
-        root = self._state.destination_root or Path("dest")
         mode = self._state.org_mode
+        if mode not in self._MODE_IDS:
+            self._preview_label.setText("← Select an organisation mode to see a preview")
+            self._preview_label.setStyleSheet("color: #888; font-size: 11px; font-style: italic;")
+            return
+        root = self._state.destination_root or Path("dest")
         if mode == OrgMode.YEAR_MONTH:
             preview = root / "2024" / "06-June" / "My Vacation"
         elif mode == OrgMode.YEAR_ONLY:
             preview = root / "2024" / "My Vacation"
-        else:
+        elif mode == OrgMode.EVENT_YEAR:
+            preview = root / "2024" / "Bali Trip"
+        elif mode == OrgMode.FILE_DATE:
+            preview = root / "2024" / "06-June" / "IMG_4821.jpg"
+        else:  # FLAT
             preview = root / "My Vacation"
         self._preview_label.setText(str(preview))
+        self._preview_label.setStyleSheet("color: #e0e0e0; font-size: 11px; font-style: normal;")
 
     # ------------------------------------------------------------------
     # Slots
@@ -522,6 +550,7 @@ class DestinationStep(QWidget):
         if 0 <= idx < len(self._MODE_IDS):
             self._state.org_mode = self._MODE_IDS[idx]
         self._refresh_preview()
+        self._update_next_btn()
         # Re-run probe if destination already chosen
         if self._state.destination_root and self._state.scan_result:
             self._start_probe()
@@ -661,11 +690,12 @@ class DestinationStep(QWidget):
     def _on_probe_complete(self) -> None:
         self._probe_bar.hide()
         count = len(self._state.scan_result.folder_nodes) if self._state.scan_result else 0
+        mode_label = ORG_MODE_LABELS.get(self._state.org_mode, "").split("—")[0].strip()
         self._probe_status.setText(
-            f"✓ {count} folders resolved  —  "
-            f"files will be organised by {ORG_MODE_LABELS.get(self._state.org_mode, '').split('—')[0].strip()}"
+            f"✓ {count} folders resolved"
+            + (f"  —  organised by {mode_label}" if mode_label else "")
         )
-        self._next_btn.setEnabled(True)
+        self._update_next_btn()
         logger.info("Probe complete — mode=%s, folders=%d", self._state.org_mode, count)
 
     def _on_next(self) -> None:
@@ -689,5 +719,6 @@ class DestinationStep(QWidget):
             self._update_space_label(self._state.destination_root)
         self._apply_initial_mode()
         self._refresh_preview()
+        self._update_next_btn()
         # Always refresh drive cards so free-space indicators are current
         self._start_drive_scan()
