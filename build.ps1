@@ -82,13 +82,32 @@ if ($Onefile) {
 if ($Installer) {
     Write-Host ""
     Write-Host "[6] Building Inno Setup installer..." -ForegroundColor Yellow
-    $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-    if (-not $iscc) {
+
+    # Look for ISCC.exe: system PATH first, then standard install locations
+    $isccPath = $null
+    $candidates = @(
+        "ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
+        "C:\Program Files\Inno Setup 5\ISCC.exe"
+    )
+    foreach ($c in $candidates) {
+        if (Get-Command $c -ErrorAction SilentlyContinue) { $isccPath = $c; break }
+        if (Test-Path $c) { $isccPath = $c; break }
+    }
+
+    if (-not $isccPath) {
         Write-Host "    ISCC.exe not found - skipping." -ForegroundColor Yellow
         Write-Host "    Download Inno Setup from https://jrsoftware.org/isinfo.php"
     } else {
-        ISCC.exe installer\Mediagator.iss
-        Write-Host "    Installer: dist\Mediagator_Setup.exe" -ForegroundColor Green
+        Write-Host "    Using: $isccPath"
+        & $isccPath installer\Mediagator.iss
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "    Installer ready: dist\Mediagator_Setup_1.0.0.exe" -ForegroundColor Green
+        } else {
+            Write-Host "    Inno Setup failed (exit $LASTEXITCODE)" -ForegroundColor Red
+        }
     }
 }
 
