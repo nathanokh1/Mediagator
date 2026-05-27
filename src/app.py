@@ -46,7 +46,9 @@ QScrollBar:vertical   { background: #e0e0ea; width: 10px; }
 QScrollBar::handle:vertical { background: #aaa; border-radius: 4px; }
 QScrollBar:horizontal { background: #e0e0ea; height: 10px; }
 QScrollBar::handle:horizontal { background: #aaa; border-radius: 4px; }
-QWidget#navBar   { background: #e4e4ee; border-top: 1px solid #bbb; }
+QWidget#navBar   { background: #e8e8f2; border-top: 1px solid #ccc; }
+QWidget#appHeader { background: #ffffff; border-bottom: 1px solid #ddd; }
+QLabel#appTitle   { color: #e65100; }
 QCheckBox        { color: #1a1a2e; }
 QRadioButton     { color: #1a1a2e; }
 QLabel           { color: #1a1a2e; }
@@ -54,6 +56,16 @@ QComboBox        { background: #ffffff; border: 1px solid #bbb;
                    border-radius: 4px; color: #1a1a2e; padding: 3px 8px; }
 QComboBox::drop-down { border: none; }
 QComboBox QAbstractItemView { background: #ffffff; color: #1a1a2e; }
+QPushButton#primaryBtn:disabled {
+    background: #c8c8d8; color: #888; border: 1px solid #bbb; }
+QPushButton#secondaryBtn {
+    background: transparent; color: #444; border: 1px solid #bbb; }
+QPushButton#secondaryBtn:hover {
+    background: #e0e0f0; color: #111; border-color: #888; }
+QPushButton#secondaryBtn:pressed {
+    background: #d0d0e0; }
+QPushButton#accentBtn:disabled {
+    background: #b0ccb2; color: #666; border: none; }
 """
 
 from src.utils.logger import setup_logging, shutdown_logging
@@ -140,6 +152,13 @@ QPushButton#accentBtn:disabled {
 QWidget#navBar {
     background: #1e1e2e;
     border-top: 1px solid #333;
+}
+QWidget#appHeader {
+    background: #1e1e2e;
+    border-bottom: 1px solid #333;
+}
+QLabel#appTitle {
+    color: #ff9800;
 }
 """
 

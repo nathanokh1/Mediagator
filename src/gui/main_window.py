@@ -70,31 +70,28 @@ class MainWindow(QMainWindow):
         root.setSpacing(0)
 
         # Header bar
+        self._is_dark = self._state.settings.get("theme", "dark") == "dark"
         header = QFrame()
+        header.setObjectName("appHeader")
         header.setFixedHeight(56)
-        header.setStyleSheet("background: #1e1e2e; border-bottom: 1px solid #333;")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(24, 0, 24, 0)
 
         app_title = QLabel("Mediagator")
+        app_title.setObjectName("appTitle")
         font = QFont()
         font.setBold(True)
         font.setPointSize(13)
         app_title.setFont(font)
-        app_title.setStyleSheet("color: #ff9800;")
         header_layout.addWidget(app_title)
         header_layout.addStretch()
 
-        # Theme toggle (moon = dark active, sun = switch to light)
+        # Theme toggle (sun shown when dark mode active = "click to go light")
         current_theme = self._state.settings.get("theme", "dark")
         self._theme_btn = QPushButton("☀" if current_theme == "dark" else "🌙")
         self._theme_btn.setToolTip("Switch to light theme" if current_theme == "dark" else "Switch to dark theme")
         self._theme_btn.setFixedSize(36, 36)
-        self._theme_btn.setStyleSheet(
-            "QPushButton { background: transparent; border: 1px solid #444;"
-            " border-radius: 18px; font-size: 16px; color: #ccc; }"
-            "QPushButton:hover { background: #2a2a3e; border-color: #ff9800; }"
-        )
+        self._update_theme_btn(self._is_dark)
         self._theme_btn.clicked.connect(self._toggle_theme)
         header_layout.addWidget(self._theme_btn)
 
@@ -147,6 +144,21 @@ class MainWindow(QMainWindow):
         if hasattr(report_step, "new_transfer_requested"):
             report_step.new_transfer_requested.connect(lambda: self._go_to_step(1))
 
+    def _update_theme_btn(self, is_dark: bool) -> None:
+        """Apply the correct inline style to the theme toggle button."""
+        if is_dark:
+            self._theme_btn.setStyleSheet(
+                "QPushButton { background: transparent; border: 1px solid #444;"
+                " border-radius: 18px; font-size: 16px; color: #ccc; }"
+                "QPushButton:hover { background: #2a2a3e; border-color: #ff9800; }"
+            )
+        else:
+            self._theme_btn.setStyleSheet(
+                "QPushButton { background: transparent; border: 1px solid #bbb;"
+                " border-radius: 18px; font-size: 16px; color: #555; }"
+                "QPushButton:hover { background: #e0e0f0; border-color: #ff9800; }"
+            )
+
     def _toggle_theme(self) -> None:
         """Switch between dark and light themes and persist the choice."""
         current = self._state.settings.get("theme", "dark")
@@ -157,10 +169,12 @@ class MainWindow(QMainWindow):
         self._theme_applier(new_theme)
 
         is_dark = new_theme == "dark"
+        self._is_dark = is_dark
         self._theme_btn.setText("☀" if is_dark else "🌙")
         self._theme_btn.setToolTip(
             "Switch to light theme" if is_dark else "Switch to dark theme"
         )
+        self._update_theme_btn(is_dark)
         self._breadcrumb.apply_theme(is_dark)
         logger.info("Theme switched to: %s", new_theme)
 
@@ -211,6 +225,7 @@ class _ChevronStepper(QWidget):
         self._n       = len(names)
         self._names   = self._SHORT[: self._n]
         self._active  = 0
+        self._is_dark = True
         self.setFixedHeight(self._H)
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
 
@@ -220,10 +235,11 @@ class _ChevronStepper(QWidget):
 
     def apply_theme(self, is_dark: bool) -> None:
         """Update chevron colours when the application theme changes."""
+        self._is_dark = is_dark
         if is_dark:
             self._GRAD_FUTURE = ("#252538", "#1a1a2e")
         else:
-            self._GRAD_FUTURE = ("#d8d8e8", "#c0c0d0")
+            self._GRAD_FUTURE = ("#d4d4e4", "#bdbdcd")
         self.update()
 
     # ------------------------------------------------------------------
@@ -283,7 +299,7 @@ class _ChevronStepper(QWidget):
                 name_font.setBold(True)
             else:
                 c1, c2 = self._GRAD_FUTURE
-                text_col = QColor("#555577")
+                text_col = QColor("#8888aa") if self._is_dark else QColor("#555568")
                 name_font.setBold(False)
 
             grad = QLinearGradient(x, 0, x, H)
@@ -295,9 +311,10 @@ class _ChevronStepper(QWidget):
             p.setPen(Qt.PenStyle.NoPen)
             p.drawPolygon(poly)
 
-            # 1px dark separator line on left edge (skip first)
+            # 1px separator line on left edge (skip first) — adapts to theme
             if i > 0:
-                p.setPen(QPen(QColor("#0d0d18"), 1))
+                sep_col = "#0d0d18" if self._is_dark else "#9898b0"
+                p.setPen(QPen(QColor(sep_col), 1))
                 p.drawLine(int(x), self._V_PAD, int(x), H - self._V_PAD)
 
             # ── step name — vertically centred ────────────────────────

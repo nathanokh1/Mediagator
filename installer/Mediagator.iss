@@ -28,7 +28,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
-OutputDir=C:\Users\Pheonix\Desktop
+OutputDir=C:\Users\Pheonix\AppData\Local\MediagatorBuild
 OutputBaseFilename=Mediagator_Setup_{#AppVersion}
 SetupIconFile={#IconFile}
 Compression=lzma2/ultra64
@@ -50,7 +50,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon";     Description: "Create a &desktop shortcut";             GroupDescription: "Additional icons:"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "Create a &Quick Launch shortcut";         GroupDescription: "Additional icons:"; Flags: unchecked; OnlyBelowVersion: 6.1
+Name: "quicklaunchicon"; Description: "Create a &Quick Launch shortcut";         GroupDescription: "Additional icons:"; Flags: unchecked
 Name: "startupicon";     Description: "Launch {#AppName} when Windows starts";   GroupDescription: "Startup:";          Flags: unchecked
 
 [Files]
@@ -61,7 +61,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Name: "{group}\{#AppName}";                 Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"
 Name: "{group}\Uninstall {#AppName}";       Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#AppName}";         Filename: "{app}\{#AppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#AppExeName}"
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: quicklaunchicon
+Name: "{userprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: quicklaunchicon
 
 [Registry]
 ; Add to startup (optional task)

@@ -74,7 +74,7 @@ Write-Host "      Folder bundle ready: dist\Mediagator\" -ForegroundColor Green
 if ($Onefile) {
     Write-Host ""
     Write-Host "[5] Building single-file portable .exe..." -ForegroundColor Yellow
-    pyinstaller src/main.py --name Mediagator_portable --onefile --noconsole --icon assets/icon.ico --uac-admin --add-data "assets;assets" --noconfirm
+    pyinstaller src/main.py --name Mediagator_portable --onefile --noconsole --icon assets/icon.ico --add-data "assets;assets" --noconfirm
     Write-Host "    Portable .exe: dist\Mediagator_portable.exe" -ForegroundColor Green
 }
 
@@ -102,9 +102,19 @@ if ($Installer) {
         Write-Host "    Download Inno Setup from https://jrsoftware.org/isinfo.php"
     } else {
         Write-Host "    Using: $isccPath"
+        # Compile to AppData\Local to avoid OneDrive file-lock errors, then copy to dist\
+        $buildOut = "$env:LOCALAPPDATA\MediagatorBuild"
+        New-Item -ItemType Directory -Force $buildOut | Out-Null
         & $isccPath installer\Mediagator.iss
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "    Installer ready: dist\Mediagator_Setup_1.0.0.exe" -ForegroundColor Green
+            $src = "$buildOut\Mediagator_Setup_1.0.0.exe"
+            $dst = "dist\Mediagator_Setup_1.0.0.exe"
+            if (Test-Path $src) {
+                Copy-Item $src $dst -Force
+                Write-Host "    Installer ready: $dst" -ForegroundColor Green
+            } else {
+                Write-Host "    Installer compiled (check $buildOut)" -ForegroundColor Green
+            }
         } else {
             Write-Host "    Inno Setup failed (exit $LASTEXITCODE)" -ForegroundColor Red
         }

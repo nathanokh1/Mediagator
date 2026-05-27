@@ -81,7 +81,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='assets/icon.ico',
-    uac_admin=True,         # request elevation on launch
+    uac_admin=False,        # elevation handled in-code by main.py (_try_elevate)
     version='version_info.txt' if Path('version_info.txt').exists() else None,
 )
 
