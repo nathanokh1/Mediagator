@@ -8,13 +8,16 @@ Author: Nathan
 """
 
 import logging
+from pathlib import Path
 from typing import Callable
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QStackedWidget, QFrame, QPushButton,
 )
-from PyQt6.QtCore import Qt, QRect, QPointF
-from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF
+from PyQt6.QtCore import Qt, QRect, QPointF, QSize
+from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF, QPixmap, QIcon
+
+_ICON_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "icon_512.png"
 
 from src.config.constants import WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES
 from src.config.settings import save_settings
@@ -75,22 +78,34 @@ class MainWindow(QMainWindow):
         header.setObjectName("appHeader")
         header.setFixedHeight(56)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(24, 0, 24, 0)
+        header_layout.setContentsMargins(16, 0, 16, 0)
+        header_layout.setSpacing(10)
+
+        # App icon
+        if _ICON_PATH.exists():
+            icon_lbl = QLabel()
+            px = QPixmap(str(_ICON_PATH)).scaled(
+                36, 36, Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            icon_lbl.setPixmap(px)
+            icon_lbl.setFixedSize(36, 36)
+            header_layout.addWidget(icon_lbl)
 
         app_title = QLabel("Mediagator")
         app_title.setObjectName("appTitle")
         font = QFont()
         font.setBold(True)
-        font.setPointSize(13)
+        font.setPointSize(14)
         app_title.setFont(font)
         header_layout.addWidget(app_title)
         header_layout.addStretch()
 
-        # Theme toggle (sun shown when dark mode active = "click to go light")
+        # Theme toggle — flat pill button, no emoji circle
         current_theme = self._state.settings.get("theme", "dark")
-        self._theme_btn = QPushButton("☀" if current_theme == "dark" else "🌙")
+        self._theme_btn = QPushButton("☀  Light" if current_theme == "dark" else "🌙  Dark")
         self._theme_btn.setToolTip("Switch to light theme" if current_theme == "dark" else "Switch to dark theme")
-        self._theme_btn.setFixedSize(36, 36)
+        self._theme_btn.setFixedHeight(30)
         self._update_theme_btn(self._is_dark)
         self._theme_btn.clicked.connect(self._toggle_theme)
         header_layout.addWidget(self._theme_btn)
@@ -148,15 +163,15 @@ class MainWindow(QMainWindow):
         """Apply the correct inline style to the theme toggle button."""
         if is_dark:
             self._theme_btn.setStyleSheet(
-                "QPushButton { background: transparent; border: 1px solid #444;"
-                " border-radius: 18px; font-size: 16px; color: #ccc; }"
-                "QPushButton:hover { background: #2a2a3e; border-color: #ff9800; }"
+                "QPushButton { background: #2a2a3e; border: 1px solid #555;"
+                " border-radius: 6px; font-size: 11px; color: #bbb; padding: 0 12px; }"
+                "QPushButton:hover { background: #3a3a52; border-color: #ff9800; color: #fff; }"
             )
         else:
             self._theme_btn.setStyleSheet(
-                "QPushButton { background: transparent; border: 1px solid #bbb;"
-                " border-radius: 18px; font-size: 16px; color: #555; }"
-                "QPushButton:hover { background: #e0e0f0; border-color: #ff9800; }"
+                "QPushButton { background: #f0f0f8; border: 1px solid #ccc;"
+                " border-radius: 6px; font-size: 11px; color: #444; padding: 0 12px; }"
+                "QPushButton:hover { background: #e4e4f0; border-color: #ff9800; color: #111; }"
             )
 
     def _toggle_theme(self) -> None:
@@ -170,7 +185,7 @@ class MainWindow(QMainWindow):
 
         is_dark = new_theme == "dark"
         self._is_dark = is_dark
-        self._theme_btn.setText("☀" if is_dark else "🌙")
+        self._theme_btn.setText("☀  Light" if is_dark else "🌙  Dark")
         self._theme_btn.setToolTip(
             "Switch to light theme" if is_dark else "Switch to dark theme"
         )
@@ -310,12 +325,6 @@ class _ChevronStepper(QWidget):
             p.setBrush(grad)
             p.setPen(Qt.PenStyle.NoPen)
             p.drawPolygon(poly)
-
-            # 1px separator line on left edge (skip first) — adapts to theme
-            if i > 0:
-                sep_col = "#0d0d18" if self._is_dark else "#9898b0"
-                p.setPen(QPen(QColor(sep_col), 1))
-                p.drawLine(int(x), self._V_PAD, int(x), H - self._V_PAD)
 
             # ── step name — vertically centred ────────────────────────
             text_rect = QRect(

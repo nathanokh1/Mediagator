@@ -40,11 +40,12 @@ _COL_TYPE = 1
 _COL_SIZE = 2
 
 _COLOUR_MEDIA   = QColor("#4caf50")
-_COLOUR_UNKNOWN = QColor("#e0e0e0")
-_COLOUR_SYSTEM  = QColor("#616161")
+_COLOUR_SYSTEM  = QColor("#888888")
 
-_BADGE = {"media": "📷 Media", "unknown": "📁 Folder", "system": "⚙ System"}
-_COLOUR = {"media": _COLOUR_MEDIA, "unknown": _COLOUR_UNKNOWN, "system": _COLOUR_SYSTEM}
+# unknown folders intentionally left out — they inherit the tree's default
+# text colour so they remain readable in both dark and light themes
+_BADGE   = {"media": "📷 Media", "unknown": "📁 Folder", "system": "⚙ System"}
+_COLOUR  = {"media": _COLOUR_MEDIA, "system": _COLOUR_SYSTEM}
 
 _PLACEHOLDER_TEXT = "⟳  Loading…"
 _ROLE_KIND  = Qt.ItemDataRole.UserRole          # "drive:<letter>" or classification str
@@ -263,14 +264,19 @@ class DriveTreeWidget(QTreeWidget):
 
     def _make_folder_item(self, folder: Path, classification: str) -> QTreeWidgetItem:
         badge = _BADGE.get(classification, _BADGE["unknown"])
-        colour = _COLOUR.get(classification, _COLOUR["unknown"])
 
         item = QTreeWidgetItem([f"  {folder.name}", badge, "…"])
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-
         item.setCheckState(_COL_NAME, Qt.CheckState.Unchecked)
-        item.setForeground(_COL_NAME, QBrush(colour))
-        item.setForeground(_COL_TYPE, QBrush(colour))
+
+        # Only apply explicit colour for media (green) and system (muted grey).
+        # Unknown folders inherit the tree's default text colour so they stay
+        # readable in both dark and light themes.
+        colour = _COLOUR.get(classification)
+        if colour is not None:
+            item.setForeground(_COL_NAME, QBrush(colour))
+            item.setForeground(_COL_TYPE, QBrush(colour))
+
         item.setData(_COL_NAME, _ROLE_KIND, classification)
         item.setData(_COL_NAME, _ROLE_PATH, folder)
         item.setToolTip(_COL_NAME, str(folder))

@@ -47,7 +47,7 @@ QScrollBar::handle:vertical { background: #aaa; border-radius: 4px; }
 QScrollBar:horizontal { background: #e0e0ea; height: 10px; }
 QScrollBar::handle:horizontal { background: #aaa; border-radius: 4px; }
 QWidget#navBar   { background: #e8e8f2; border-top: 1px solid #ccc; }
-QWidget#appHeader { background: #ffffff; border-bottom: 1px solid #ddd; }
+QWidget#appHeader { background: #fafafa; border-bottom: 3px solid #ff9800; }
 QLabel#appTitle   { color: #e65100; }
 QLabel#hintLabel    { color: #666; }
 QLabel#sectionLabel { color: #222; }
