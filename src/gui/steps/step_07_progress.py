@@ -53,6 +53,7 @@ class TransferProgressStep(QWidget):
         self._cancel_event = threading.Event()
         self._start_time: float = 0.0
         self._defender_paths: list = []   # paths added to Defender exclusions
+        self._completed_paths: set[str] = set()  # source paths already transferred
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -103,6 +104,15 @@ class TransferProgressStep(QWidget):
         # Navigation
         nav = QHBoxLayout()
         nav.addStretch()
+
+        self._resume_btn = QPushButton("▶  Resume Transfer")
+        self._resume_btn.setObjectName("accentBtn")
+        self._resume_btn.setFixedHeight(36)
+        self._resume_btn.setMinimumWidth(160)
+        self._resume_btn.clicked.connect(self._on_resume)
+        self._resume_btn.hide()
+        nav.addWidget(self._resume_btn)
+
         self._cancel_btn = QPushButton("Cancel Transfer")
         self._cancel_btn.setFixedSize(160, 36)
         self._cancel_btn.setStyleSheet("background-color: #b71c1c;")
@@ -115,6 +125,8 @@ class TransferProgressStep(QWidget):
         self._cancel_event.clear()
         self._cancel_btn.setText("Cancel Transfer")
         self._cancel_btn.setEnabled(True)
+        self._resume_btn.hide()
+        self._completed_paths.clear()
         self._error_panel.clear_errors()
         self._defender_banner.hide()
         self._space_banner.hide()
@@ -185,8 +197,10 @@ class TransferProgressStep(QWidget):
             transfer_logger=transfer_logger,
             cancellation_event=self._cancel_event,
             hardware_profile=self._state.hardware_profile,
+            skip_paths=self._completed_paths,
         )
         self._worker.progress_updated.connect(self._on_progress)
+        self._worker.item_completed.connect(self._on_item_completed)
         self._worker.error_occurred.connect(self._on_error)
         self._worker.phase_completed.connect(self._on_phase_complete)
         self._worker.transfer_complete.connect(self._on_transfer_complete)
@@ -216,6 +230,18 @@ class TransferProgressStep(QWidget):
         self._progress_widget.update_progress(
             files_done, files_total, bytes_transferred, speed_mbs, src, dst, elapsed
         )
+
+    @pyqtSlot(str, str, str)
+    def _on_item_completed(self, source: str, _dest: str, result: str) -> None:
+        """Track successfully transferred source paths for resume support.
+
+        Args:
+            source: Source file path string.
+            _dest: Destination path (unused here).
+            result: Transfer outcome string.
+        """
+        if result == "SUCCESS":
+            self._completed_paths.add(source)
 
     @pyqtSlot(str, str, str)
     def _on_error(self, timestamp: str, source: str, issue: str) -> None:
@@ -272,4 +298,43 @@ class TransferProgressStep(QWidget):
         remove_defender_exclusions(self._defender_paths)
         if self._state.transfer_plan:
             save_session({"cancelled": True})
-        logger.info("Transfer cancelled by user.")
+        logger.info("Transfer cancelled by user — %d files already done.", len(self._completed_paths))
+
+        # Show resume button if any files were completed
+        if self._completed_paths:
+            self._resume_btn.setText(
+                f"▶  Resume  ({len(self._completed_paths):,} done, skipping…)"
+            )
+            self._resume_btn.show()
+
+    def _on_resume(self) -> None:
+        """Restart the worker, skipping already-transferred files."""
+        if not self._state.transfer_plan:
+            return
+
+        plan = self._state.transfer_plan
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        transfer_logger = get_transfer_logger(ts)
+
+        self._cancel_event.clear()
+        self._cancel_btn.setText("Cancel Transfer")
+        self._cancel_btn.setEnabled(True)
+        self._resume_btn.hide()
+
+        remaining = plan.total_files - len(self._completed_paths)
+        logger.info("Resuming transfer — %d files remaining", remaining)
+
+        self._worker = TransferWorker(
+            plan=plan,
+            settings=self._state.settings,
+            transfer_logger=transfer_logger,
+            cancellation_event=self._cancel_event,
+            hardware_profile=self._state.hardware_profile,
+            skip_paths=self._completed_paths,
+        )
+        self._worker.progress_updated.connect(self._on_progress)
+        self._worker.item_completed.connect(self._on_item_completed)
+        self._worker.error_occurred.connect(self._on_error)
+        self._worker.phase_completed.connect(self._on_phase_complete)
+        self._worker.transfer_complete.connect(self._on_transfer_complete)
+        self._worker.start()

@@ -31,6 +31,8 @@ _DEFAULTS: dict[str, Any] = {
     "lightroom_report": False,
     "welcome_seen": False,              # show welcome screen until user checks "don't show again"
     "conflict_behavior": DEFAULT_CONFLICT_BEHAVIOR,  # rename | skip | overwrite
+    "theme": "dark",                    # dark | light
+    "profiles": {},                     # name → {source_folders, extensions, destination, org_mode}
 }
 
 

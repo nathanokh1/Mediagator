@@ -25,6 +25,7 @@ from src.gui.wizard_state import WizardState
 from src.gui.widgets.drive_tree_widget import DriveTreeWidget
 from src.gui.widgets.exclusion_list_widget import ExclusionListWidget
 from src.gui.widgets.file_type_filter_widget import FileTypeFilterWidget
+from src.gui.widgets.profile_widget import ProfileWidget
 from src.core.scanner import enumerate_drives
 from src.config.settings import save_settings
 from src.config.constants import DEFAULT_SELECTED_EXTENSIONS
@@ -71,6 +72,13 @@ class DriveSelectionStep(QWidget):
         title = QLabel("Select Folders & File Types to Scan")
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(title)
+
+        # ── Saved Profiles ─────────────────────────────────────────────
+        self._profile_widget = ProfileWidget(self._state.settings)
+        self._profile_widget.profile_loaded.connect(self._on_profile_load)
+        self._profile_widget.save_requested.connect(self._on_profile_save)
+        self._profile_widget.delete_requested.connect(self._on_profile_delete)
+        layout.addWidget(self._profile_widget)
 
         subtitle = QLabel(
             "Expand each drive to choose folders, then click the ones you want to scan.  "
@@ -227,10 +235,60 @@ class DriveSelectionStep(QWidget):
         )
         save_settings(self._state.settings)
 
+    # ------------------------------------------------------------------
+    # Profile handlers
+    # ------------------------------------------------------------------
+
+    def _on_profile_save(self, name: str) -> None:
+        """Snapshot current state under *name* and persist."""
+        profile = {
+            "source_folders": [str(f) for f in self._state.selected_scan_folders],
+            "extensions":     sorted(self._state.selected_extensions),
+            "destination":    str(self._state.destination_root) if self._state.destination_root else None,
+            "org_mode":       self._state.org_mode or None,
+        }
+        profiles = self._state.settings.setdefault("profiles", {})
+        profiles[name] = profile
+        save_settings(self._state.settings)
+        self._profile_widget.refresh(self._state.settings)
+        logger.info("Profile saved: %s", name)
+
+    def _on_profile_load(self, profile: dict) -> None:
+        """Restore state from a saved *profile* dict."""
+        # Extensions
+        exts = set(profile.get("extensions", []))
+        if exts:
+            self._state.selected_extensions = exts
+            self._file_filter.set_selected_extensions(exts)
+
+        # Source folders — restore state and visually check matching tree items
+        folders = [Path(f) for f in profile.get("source_folders", []) if Path(f).exists()]
+        self._state.selected_scan_folders = folders
+        self._tree.check_paths(folders)
+
+        # Destination + org mode (silently restore; user sees it when they reach step 3)
+        dest = profile.get("destination")
+        if dest and Path(dest).exists():
+            self._state.destination_root = Path(dest)
+        org = profile.get("org_mode")
+        if org:
+            self._state.org_mode = org
+
+        self._update_status()
+        self._persist_settings()
+        logger.info("Profile loaded: %d folders, %d extensions", len(folders), len(exts))
+
+    def _on_profile_delete(self, name: str) -> None:
+        profiles = self._state.settings.get("profiles", {})
+        profiles.pop(name, None)
+        save_settings(self._state.settings)
+        self._profile_widget.refresh(self._state.settings)
+        logger.info("Profile deleted: %s", name)
+
     def _on_next(self) -> None:
         if self._state.selected_scan_folders and self._state.selected_extensions:
             self.next_requested.emit()
 
     def refresh(self) -> None:
         """Called when the step becomes visible."""
-        pass
+        self._profile_widget.refresh(self._state.settings)

@@ -191,6 +191,29 @@ class DriveTreeWidget(QTreeWidget):
                 result.append(path)
         return result
 
+    def check_paths(self, paths: list[Path]) -> None:
+        """Check items whose path is in *paths*; uncheck all others.
+
+        Only already-loaded items are affected; lazy-loaded children that
+        have not yet been expanded keep their state but the caller's
+        WizardState already holds the correct folder list.
+
+        Args:
+            paths: Folder paths that should be checked.
+        """
+        target = set(paths)
+        self._loading = True
+        for path, item in self._folder_items.items():
+            state = (
+                Qt.CheckState.Checked
+                if path in target
+                else Qt.CheckState.Unchecked
+            )
+            item.setCheckState(_COL_NAME, state)
+        self._loading = False
+        self._sync_drive_states()
+        self._emit_selection()
+
     def select_all_media(self) -> None:
         """Check media/unknown, uncheck system folders."""
         self._loading = True

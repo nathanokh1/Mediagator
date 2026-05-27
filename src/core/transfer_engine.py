@@ -86,6 +86,7 @@ class TransferWorker(QThread):
         transfer_logger: logging.Logger,
         cancellation_event: threading.Event | None = None,
         hardware_profile: HardwareProfile | None = None,
+        skip_paths: set[str] | None = None,
     ) -> None:
         """Initialise the transfer worker.
 
@@ -95,14 +96,27 @@ class TransferWorker(QThread):
             transfer_logger: Per-session file logger.
             cancellation_event: Optional shared event for clean stop.
             hardware_profile: Detected hardware config for adaptive settings.
+            skip_paths: Optional set of source path strings already
+                transferred; these files will be counted but not re-copied,
+                enabling in-session resume after a cancellation.
         """
         super().__init__()
         self._plan = plan
         self._settings = settings
         self._transfer_logger = transfer_logger
         self._cancel = cancellation_event or threading.Event()
+        self._skip_paths: set[str] = skip_paths or set()
+
+        # Adjust totals to account for files already done
+        already_done = sum(
+            1 for phase in plan.phases
+            for folder in phase.folders
+            for f in folder.source_files
+            if str(f) in self._skip_paths
+        )
         self._stats = TransferStats(
-            files_remaining=plan.total_files,
+            files_completed=already_done,
+            files_remaining=max(0, plan.total_files - already_done),
         )
         self._last_progress_emit = 0.0
         self._progress_lock = threading.Lock()
@@ -225,6 +239,11 @@ class TransferWorker(QThread):
             dest: Intended destination file path.
             start_time: Monotonic start time for speed computation.
         """
+        # Skip files already transferred (in-session resume)
+        if str(src) in self._skip_paths:
+            self.item_completed.emit(str(src), str(dest), "SKIPPED")
+            return
+
         total = self._plan.total_files
         done = self._stats.files_completed
 

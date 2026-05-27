@@ -8,14 +8,16 @@ Author: Nathan
 """
 
 import logging
+from typing import Callable
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QStackedWidget, QFrame,
+    QLabel, QStackedWidget, QFrame, QPushButton,
 )
 from PyQt6.QtCore import Qt, QRect, QPointF
 from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF
 
 from src.config.constants import WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES
+from src.config.settings import save_settings
 from src.gui.wizard_state import WizardState
 from src.gui.steps.step_00_welcome import WelcomeStep
 from src.gui.steps.step_01_drive_selection import DriveSelectionStep
@@ -37,14 +39,22 @@ class MainWindow(QMainWindow):
         state: Shared :class:`WizardState` instance.
     """
 
-    def __init__(self, state: WizardState) -> None:
+    def __init__(
+        self,
+        state: WizardState,
+        theme_applier: Callable[[str], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         """Initialise the main window.
 
         Args:
             state: Shared wizard state passed to every step.
+            theme_applier: Optional callback ``fn(theme_name)`` that switches
+                the application palette.  If omitted, theme toggle is a no-op.
         """
-        super().__init__()
+        super().__init__(parent)
         self._state = state
+        self._theme_applier = theme_applier or (lambda _: None)
         self._current_step = 0
         self.setWindowTitle(WINDOW_TITLE)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
@@ -74,6 +84,20 @@ class MainWindow(QMainWindow):
         app_title.setStyleSheet("color: #ff9800;")
         header_layout.addWidget(app_title)
         header_layout.addStretch()
+
+        # Theme toggle (moon = dark active, sun = switch to light)
+        current_theme = self._state.settings.get("theme", "dark")
+        self._theme_btn = QPushButton("☀" if current_theme == "dark" else "🌙")
+        self._theme_btn.setToolTip("Switch to light theme" if current_theme == "dark" else "Switch to dark theme")
+        self._theme_btn.setFixedSize(36, 36)
+        self._theme_btn.setStyleSheet(
+            "QPushButton { background: transparent; border: 1px solid #444;"
+            " border-radius: 18px; font-size: 16px; color: #ccc; }"
+            "QPushButton:hover { background: #2a2a3e; border-color: #ff9800; }"
+        )
+        self._theme_btn.clicked.connect(self._toggle_theme)
+        header_layout.addWidget(self._theme_btn)
+
         root.addWidget(header)
 
         # Chevron step indicator
@@ -122,6 +146,23 @@ class MainWindow(QMainWindow):
         report_step = self._steps[8]
         if hasattr(report_step, "new_transfer_requested"):
             report_step.new_transfer_requested.connect(lambda: self._go_to_step(1))
+
+    def _toggle_theme(self) -> None:
+        """Switch between dark and light themes and persist the choice."""
+        current = self._state.settings.get("theme", "dark")
+        new_theme = "light" if current == "dark" else "dark"
+        self._state.settings["theme"] = new_theme
+        save_settings(self._state.settings)
+
+        self._theme_applier(new_theme)
+
+        is_dark = new_theme == "dark"
+        self._theme_btn.setText("☀" if is_dark else "🌙")
+        self._theme_btn.setToolTip(
+            "Switch to light theme" if is_dark else "Switch to dark theme"
+        )
+        self._breadcrumb.apply_theme(is_dark)
+        logger.info("Theme switched to: %s", new_theme)
 
     def _go_to_step(self, index: int) -> None:
         """Navigate to a wizard step by index.
@@ -175,6 +216,14 @@ class _ChevronStepper(QWidget):
 
     def set_active(self, index: int) -> None:
         self._active = index
+        self.update()
+
+    def apply_theme(self, is_dark: bool) -> None:
+        """Update chevron colours when the application theme changes."""
+        if is_dark:
+            self._GRAD_FUTURE = ("#252538", "#1a1a2e")
+        else:
+            self._GRAD_FUTURE = ("#d8d8e8", "#c0c0d0")
         self.update()
 
     # ------------------------------------------------------------------

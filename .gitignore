@@ -38,6 +38,7 @@ session_state.json
 .cursor/
 *.cursorrules
 .cursorignore
+CURSOR-PROJECT-PROMPT.md
 
 # ── OS / editor noise ─────────────────────────────────────────────────────────
 .env

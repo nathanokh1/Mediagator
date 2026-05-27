@@ -17,6 +17,45 @@ from PyQt6.QtCore import Qt
 
 _ICON_PATH = Path(__file__).resolve().parent.parent / "assets" / "icon.ico"
 
+# ---------------------------------------------------------------------------
+# Light-theme QSS overrides (applied on top of shared button styles)
+# ---------------------------------------------------------------------------
+_LIGHT_QSS = """
+QWidget          { background-color: #f0f0f5; color: #1a1a2e; }
+QMainWindow      { background-color: #f0f0f5; }
+QGroupBox        { border: 1px solid #bbb; border-radius: 6px;
+                   margin-top: 12px; padding-top: 8px; color: #1a1a2e; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px;
+                   padding: 0 4px; color: #e65100; }
+QTreeWidget      { background-color: #ffffff;
+                   alternate-background-color: #f5f5fa;
+                   border: 1px solid #ccc; color: #1a1a2e; }
+QHeaderView::section { background-color: #e0e0ea; border: none;
+                        padding: 4px 8px; color: #444; }
+QLineEdit, QListWidget, QTextBrowser {
+    background-color: #ffffff; border: 1px solid #bbb;
+    border-radius: 4px; color: #1a1a2e; }
+QPushButton      { background-color: #e0e0ea; border: 1px solid #aaa;
+                   border-radius: 4px; padding: 6px 14px; color: #1a1a2e; }
+QPushButton:hover { background-color: #d0d0de; border-color: #888; }
+QPushButton:disabled { color: #aaa; border-color: #ccc; background: #e8e8f0; }
+QProgressBar     { background-color: #e0e0ea; border: 1px solid #bbb;
+                   border-radius: 4px; color: #1a1a2e; }
+QProgressBar::chunk { background-color: #ff9800; border-radius: 3px; }
+QScrollBar:vertical   { background: #e0e0ea; width: 10px; }
+QScrollBar::handle:vertical { background: #aaa; border-radius: 4px; }
+QScrollBar:horizontal { background: #e0e0ea; height: 10px; }
+QScrollBar::handle:horizontal { background: #aaa; border-radius: 4px; }
+QWidget#navBar   { background: #e4e4ee; border-top: 1px solid #bbb; }
+QCheckBox        { color: #1a1a2e; }
+QRadioButton     { color: #1a1a2e; }
+QLabel           { color: #1a1a2e; }
+QComboBox        { background: #ffffff; border: 1px solid #bbb;
+                   border-radius: 4px; color: #1a1a2e; padding: 3px 8px; }
+QComboBox::drop-down { border: none; }
+QComboBox QAbstractItemView { background: #ffffff; color: #1a1a2e; }
+"""
+
 from src.utils.logger import setup_logging, shutdown_logging
 from src.config.settings import load_settings
 from src.gui.wizard_state import WizardState
@@ -199,6 +238,21 @@ def _apply_dark_palette(app: QApplication) -> None:
     """)
 
 
+def apply_theme(app: QApplication, theme: str) -> None:
+    """Switch the application-wide theme at runtime.
+
+    Args:
+        app: The running :class:`QApplication`.
+        theme: ``"dark"`` or ``"light"``.
+    """
+    if theme == "light":
+        # Reset to system default palette first, then apply light QSS
+        app.setPalette(app.style().standardPalette())
+        app.setStyleSheet(_SHARED_QSS + _LIGHT_QSS)
+    else:
+        _apply_dark_palette(app)
+
+
 def run() -> int:
     """Entry point — create QApplication and show MainWindow.
 
@@ -213,12 +267,18 @@ def run() -> int:
     if _ICON_PATH.exists():
         app.setWindowIcon(QIcon(str(_ICON_PATH)))
 
-    _apply_dark_palette(app)
-
     settings = load_settings()
+
+    # Apply saved theme before window is shown
+    saved_theme = settings.get("theme", "dark")
+    if saved_theme == "light":
+        apply_theme(app, "light")
+    else:
+        _apply_dark_palette(app)
+
     state = WizardState(settings=settings)
 
-    window = MainWindow(state)
+    window = MainWindow(state, theme_applier=lambda t: apply_theme(app, t))
     window.show()
 
     exit_code = app.exec()
