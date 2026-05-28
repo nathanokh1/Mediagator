@@ -4,6 +4,18 @@
 
 Mediagator scans your drives for media files, lets you choose exactly what to move, and transfers everything to a destination drive — sorted by year, year/month, file type, or flat — with real-time progress and a full report when done.
 
+<p align="center">
+  <a href="https://github.com/nathanokh1/Mediagator/releases/latest">
+    <img src="https://img.shields.io/github/v/release/nathanokh1/Mediagator?label=latest%20release&color=ff9800&style=for-the-badge" alt="Latest Release"/>
+  </a>
+  &nbsp;
+  <a href="https://github.com/nathanokh1/Mediagator/releases/latest/download/Mediagator_Setup_1.0.1.exe">
+    <img src="https://img.shields.io/badge/⬇ Download%20Installer-.exe-brightgreen?style=for-the-badge" alt="Download Installer"/>
+  </a>
+</p>
+
+> **Windows 10 / 11 &nbsp;·&nbsp; Free &nbsp;·&nbsp; No account required**
+
 ---
 
 ## Features
