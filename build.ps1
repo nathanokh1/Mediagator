@@ -48,12 +48,12 @@ $v = "VSVersionInfo(`n" +
      "    StringFileInfo([StringTable(u'040904B0',[`n" +
      "      StringStruct(u'CompanyName',u'Nathan'),`n" +
      "      StringStruct(u'FileDescription',u'Mediagator - Media Transfer and Organisation Tool'),`n" +
-     "      StringStruct(u'FileVersion',u'1.0.0'),`n" +
+     "      StringStruct(u'FileVersion',u'1.0.1'),`n" +
      "      StringStruct(u'InternalName',u'Mediagator'),`n" +
      "      StringStruct(u'LegalCopyright',u'Copyright 2026 Nathan. MIT License.'),`n" +
      "      StringStruct(u'OriginalFilename',u'Mediagator.exe'),`n" +
      "      StringStruct(u'ProductName',u'Mediagator'),`n" +
-     "      StringStruct(u'ProductVersion',u'1.0.0')])]),`n" +
+     "      StringStruct(u'ProductVersion',u'1.0.1')])]),`n" +
      "    VarFileInfo([VarStruct(u'Translation',[1033,1200])])`n" +
      "  ]`n" +
      ")"
@@ -107,8 +107,8 @@ if ($Installer) {
         New-Item -ItemType Directory -Force $buildOut | Out-Null
         & $isccPath installer\Mediagator.iss
         if ($LASTEXITCODE -eq 0) {
-            $src = "$buildOut\Mediagator_Setup_1.0.0.exe"
-            $dst = "dist\Mediagator_Setup_1.0.0.exe"
+            $src = "$buildOut\Mediagator_Setup_1.0.1.exe"
+            $dst = "dist\Mediagator_Setup_1.0.1.exe"
             if (Test-Path $src) {
                 Copy-Item $src $dst -Force
                 Write-Host "    Installer ready: $dst" -ForegroundColor Green

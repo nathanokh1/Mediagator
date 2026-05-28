@@ -8,18 +8,22 @@ Author: Nathan
 """
 
 import logging
+import webbrowser
 from pathlib import Path
 from typing import Callable
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QStackedWidget, QFrame, QPushButton,
 )
-from PyQt6.QtCore import Qt, QRect, QPointF, QSize
+from PyQt6.QtCore import Qt, QRect, QPointF, QSize, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF, QPixmap, QIcon
 
 _ICON_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "icon_512.png"
 
-from src.config.constants import WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES
+from src.config.constants import (
+    WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES,
+    APP_VERSION, GITHUB_RELEASES_URL,
+)
 from src.config.settings import save_settings
 from src.gui.wizard_state import WizardState
 from src.gui.steps.step_00_welcome import WelcomeStep
@@ -63,6 +67,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.resize(1200, 800)
         self._build_ui()
+        self._start_update_check()
 
     def _build_ui(self) -> None:
         """Construct the main window layout."""
@@ -108,8 +113,29 @@ class MainWindow(QMainWindow):
         app_title.setFont(font)
         brand_row.addWidget(app_title)
 
+        # Version label
+        ver_lbl = QLabel(f"v{APP_VERSION}")
+        ver_lbl.setObjectName("versionLabel")
+        ver_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        ver_lbl.setStyleSheet("color: #888; font-size: 11px; padding-left: 4px;")
+        brand_row.addWidget(ver_lbl)
+
         header_layout.addWidget(brand_widget)
         header_layout.addStretch()
+
+        # Update-available button (hidden until checker fires)
+        self._update_btn = QPushButton("⬆ Update available")
+        self._update_btn.setObjectName("updateBtn")
+        self._update_btn.setFixedHeight(26)
+        self._update_btn.setStyleSheet(
+            "QPushButton { background: #ff9800; color: #000; border-radius: 4px; "
+            "font-size: 11px; padding: 0 10px; font-weight: bold; }"
+            "QPushButton:hover { background: #ffb74d; }"
+        )
+        self._update_btn.setToolTip("A new version of Mediagator is available — click to download")
+        self._update_btn.clicked.connect(lambda: webbrowser.open(GITHUB_RELEASES_URL))
+        self._update_btn.hide()
+        header_layout.addWidget(self._update_btn)
 
         # Theme toggle — flat pill button, no emoji circle
         current_theme = self._state.settings.get("theme", "dark")
@@ -218,6 +244,66 @@ class MainWindow(QMainWindow):
         step = self._steps[index]
         if hasattr(step, "refresh"):
             step.refresh()
+
+    def _start_update_check(self) -> None:
+        """Spawn a background thread to check GitHub for a newer release."""
+        self._update_checker = _UpdateChecker(APP_VERSION)
+        self._update_checker.update_available.connect(self._on_update_available)
+        self._update_checker.start()
+
+    def _on_update_available(self, latest: str) -> None:
+        """Show the update button when a newer version exists on GitHub."""
+        self._update_btn.setText(f"⬆  v{latest} available")
+        self._update_btn.setToolTip(
+            f"Mediagator v{latest} is available — click to download from GitHub"
+        )
+        self._update_btn.show()
+        logger.info("Update available: v%s (running v%s)", latest, APP_VERSION)
+
+
+class _UpdateChecker(QThread):
+    """Background thread that checks GitHub for a newer release.
+
+    Emits ``update_available(str)`` with the latest version tag if it is
+    newer than the currently running version.  Runs once on startup and
+    silently swallows all network errors.
+    """
+
+    update_available = pyqtSignal(str)
+
+    def __init__(self, current_version: str, parent=None) -> None:
+        super().__init__(parent)
+        self._current = current_version
+        self.daemon = True
+
+    def run(self) -> None:
+        try:
+            import urllib.request
+            import json
+
+            from src.config.constants import GITHUB_LATEST_API
+            req = urllib.request.Request(
+                GITHUB_LATEST_API,
+                headers={"User-Agent": "Mediagator-update-check"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+            tag = data.get("tag_name", "").lstrip("v")
+            if tag and tag != self._current and self._is_newer(tag):
+                self.update_available.emit(tag)
+        except Exception:
+            pass  # network unavailable, behind proxy, rate-limited — all fine
+
+    @staticmethod
+    def _is_newer(tag: str) -> bool:
+        """Return True if *tag* is a higher semver than the running version."""
+        from src.config.constants import APP_VERSION
+        try:
+            def _parts(v: str) -> tuple[int, ...]:
+                return tuple(int(x) for x in v.split("."))
+            return _parts(tag) > _parts(APP_VERSION)
+        except ValueError:
+            return False
 
 
 class _ChevronStepper(QWidget):
