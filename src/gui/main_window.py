@@ -124,6 +124,18 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(brand_widget)
         header_layout.addStretch()
 
+        # About / Welcome button
+        about_btn = QPushButton("?")
+        about_btn.setFixedSize(26, 26)
+        about_btn.setToolTip("About Mediagator / Welcome screen")
+        about_btn.setStyleSheet(
+            "QPushButton { background: transparent; border: 1px solid #555; "
+            "border-radius: 13px; color: #888; font-weight: bold; font-size: 12px; }"
+            "QPushButton:hover { border-color: #ff9800; color: #ff9800; }"
+        )
+        about_btn.clicked.connect(self._show_welcome)
+        header_layout.addWidget(about_btn)
+
         # Update-available button (hidden until checker fires)
         self._update_btn = QPushButton("⬆ Update available")
         self._update_btn.setObjectName("updateBtn")
@@ -245,6 +257,27 @@ class MainWindow(QMainWindow):
         step = self._steps[index]
         if hasattr(step, "refresh"):
             step.refresh()
+
+    def _show_welcome(self) -> None:
+        """Open the Welcome step as a standalone dialog (ignores don't-show setting)."""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle("About Mediagator")
+        dlg.setMinimumWidth(700)
+        dlg.setMinimumHeight(500)
+        lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(0, 0, 0, 0)
+        from src.gui.steps.step_00_welcome import WelcomeStep
+        welcome = WelcomeStep(self._state)
+        # Hide the Get Started button inside the dialog context
+        if hasattr(welcome, "_start_btn"):
+            welcome._start_btn.hide()
+        lay.addWidget(welcome)
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        btns.rejected.connect(dlg.reject)
+        btns.setContentsMargins(16, 8, 16, 12)
+        lay.addWidget(btns)
+        dlg.exec()
 
     def _start_update_check(self) -> None:
         """Spawn a background thread to check GitHub for a newer release."""

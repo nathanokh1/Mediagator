@@ -1,46 +1,44 @@
 """
-Mediagator — ScanDashboardWidget.
+Mediagator — ScanDashboardWidget (tabbed).
 
-Rich visual summary of a completed scan.  Uses QPainter for inline
-bar charts — no external charting dependencies required.
-
-Sections:
-  • Stat cards  (total files, size, images, videos, folders)
-  • Image vs Video stacked bar
-  • Top-5 largest folders horizontal bar chart
-  • Smart insights panel (cameras, events, GPS, recommendation)
+Five-tab rich analysis of a completed scan:
+  1. Overview  — summary cards, media-type bar, top folders
+  2. Timeline  — year-by-year distribution chart
+  3. File Types — per-extension breakdown
+  4. Stale Data — files by last-modified age with archive action
+  5. Folder Intel — deepest / largest / most-files folders
 
 Author: Nathan
 """
 
 from __future__ import annotations
 
-import math
+from pathlib import Path
 from typing import Any
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QScrollArea, QSizePolicy,
-)
-from PyQt6.QtCore import Qt, QRect, QSize
+from PyQt6.QtCore import Qt, QRect, QSize, pyqtSignal
 from PyQt6.QtGui import (
     QPainter, QColor, QPen, QBrush, QFont, QPaintEvent, QFontMetrics,
+)
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
+    QScrollArea, QSizePolicy, QTabWidget, QPushButton, QGridLayout,
 )
 
 from src.models.scan_result import ScanResult
 from src.utils.file_utils import human_readable_size
 
 # Palette
-_C_ORANGE  = QColor("#ff9800")
-_C_GREEN   = QColor("#4caf50")
-_C_BLUE    = QColor("#2196f3")
-_C_PURPLE  = QColor("#9c27b0")
-_C_TEAL    = QColor("#009688")
-_C_BG      = QColor("#1e1e2e")
-_C_CARD    = QColor("#2a2a3e")
-_C_TEXT    = QColor("#e0e0e0")
-_C_DIM     = QColor("#888")
-_BAR_COLOURS = [_C_ORANGE, _C_GREEN, _C_BLUE, _C_PURPLE, _C_TEAL]
+_ORANGE  = QColor("#ff9800")
+_GREEN   = QColor("#4caf50")
+_BLUE    = QColor("#2196f3")
+_PURPLE  = QColor("#9c27b0")
+_TEAL    = QColor("#009688")
+_AMBER   = QColor("#ffc107")
+_RED     = QColor("#ef5350")
+_INDIGO  = QColor("#3f51b5")
+_BAR_COLOURS = [_ORANGE, _GREEN, _BLUE, _PURPLE, _TEAL, _AMBER, _RED, _INDIGO,
+                QColor("#e91e63"), QColor("#00bcd4"), QColor("#8bc34a"), QColor("#ff5722")]
 
 
 # ---------------------------------------------------------------------------
@@ -48,316 +46,479 @@ _BAR_COLOURS = [_C_ORANGE, _C_GREEN, _C_BLUE, _C_PURPLE, _C_TEAL]
 # ---------------------------------------------------------------------------
 
 class _StatCard(QFrame):
-    """Small metric card with a large number and a description label."""
+    """Single metric card: big coloured number + label."""
 
-    def __init__(self, label: str, value: str, colour: QColor, parent=None) -> None:
+    def __init__(self, value: str, label: str, colour: QColor, parent=None) -> None:
         super().__init__(parent)
-        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setObjectName("statCard")
         self.setStyleSheet(
-            f"background: #2a2a3e; border: 1px solid #3a3a5a; border-radius: 8px;"
+            "QFrame#statCard { background: #2a2a3e; border-radius: 8px; }"
         )
-        self.setMinimumWidth(140)
+        self.setMinimumSize(130, 80)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(4)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(14, 10, 14, 10)
+        lay.setSpacing(2)
 
         val_lbl = QLabel(value)
-        font = QFont()
-        font.setPointSize(18)
-        font.setBold(True)
-        val_lbl.setFont(font)
-        val_lbl.setStyleSheet(f"color: {colour.name()}; border: none;")
-        layout.addWidget(val_lbl)
+        val_lbl.setStyleSheet(f"color: {colour.name()}; font-size: 22px; font-weight: bold;")
+        lay.addWidget(val_lbl)
 
-        desc_lbl = QLabel(label)
-        desc_lbl.setStyleSheet("color: #888; font-size: 11px; border: none;")
-        layout.addWidget(desc_lbl)
-
-
-class _StackedBar(QWidget):
-    """Horizontal stacked bar for two segments."""
-
-    def __init__(
-        self,
-        label_a: str,
-        value_a: int,
-        colour_a: QColor,
-        label_b: str,
-        value_b: int,
-        colour_b: QColor,
-        parent=None,
-    ) -> None:
-        super().__init__(parent)
-        self._segments = [
-            (label_a, value_a, colour_a),
-            (label_b, value_b, colour_b),
-        ]
-        self.setFixedHeight(54)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        total = sum(v for _, v, _ in self._segments) or 1
-        bar_h = 26
-        bar_y = 4
-        x = 0
-        w = self.width()
-
-        for label, value, colour in self._segments:
-            seg_w = int((value / total) * w)
-            p.fillRect(x, bar_y, seg_w, bar_h, colour)
-            if seg_w > 50:
-                p.setPen(QPen(QColor("#000"), 0))
-                fm = QFontMetrics(self.font())
-                pct = f"{value / total * 100:.1f}%"
-                p.drawText(x + 6, bar_y + bar_h - 6, pct)
-            x += seg_w
-
-        # Legend below bar
-        legend_y = bar_y + bar_h + 6
-        lx = 0
-        legend_col = self.palette().text().color()
-        for label, value, colour in self._segments:
-            p.fillRect(lx, legend_y + 2, 12, 10, colour)
-            p.setPen(QPen(legend_col))
-            p.drawText(lx + 16, legend_y + 11, f"{label}: {value:,}")
-            lx += 180
-        p.end()
+        lbl = QLabel(label)
+        lbl.setObjectName("hintLabel")
+        lbl.setStyleSheet("font-size: 11px;")
+        lay.addWidget(lbl)
 
 
 class _HBarChart(QWidget):
-    """Horizontal bar chart for a list of labelled values."""
+    """Horizontal bar chart rendered with QPainter — no external dependencies."""
+
+    _ROW_H  = 28
+    _GAP    = 4
+    _LABEL_W = 180
+    _VAL_W   = 80
 
     def __init__(
         self,
-        items: list[tuple[str, int]],
-        unit: str = "",
+        rows: list[tuple[str, int, int]],   # (label, value, total) — value/total drives width
+        colours: list[QColor],
+        fmt_fn=None,
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self._items = items
-        self._unit = unit
-        rows = max(len(items), 1)
-        self.setFixedHeight(rows * 38 + 8)
+        self._rows    = rows
+        self._colours = colours
+        self._fmt     = fmt_fn or (lambda v: str(v))
+        n = len(rows)
+        self.setFixedHeight(max(60, n * (self._ROW_H + self._GAP) + self._GAP))
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if not self._items:
+    def paintEvent(self, _event: QPaintEvent) -> None:
+        if not self._rows:
             return
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        max_val = max(v for _, v in self._items) or 1
-        label_w = 220
-        bar_h = 22
-        row_h = 38
-        gap = (row_h - bar_h) // 2
-
-        # Use the widget's own palette so text adapts to dark/light theme
+        W = self.width()
+        bar_area = W - self._LABEL_W - self._VAL_W - 16
         text_col = self.palette().text().color()
         dim_col  = self.palette().mid().color()
+        font = QFont(); font.setPointSize(9)
+        p.setFont(font)
 
-        for i, (label, value) in enumerate(self._items):
-            y = i * row_h
-            colour = _BAR_COLOURS[i % len(_BAR_COLOURS)]
-            bar_w = int(((self.width() - label_w - 80) * value) / max_val)
-            bar_w = max(bar_w, 4)
+        max_val = max((r[1] for r in self._rows), default=1) or 1
+        for i, (label, val, _total) in enumerate(self._rows):
+            y = self._GAP + i * (self._ROW_H + self._GAP)
+            col = self._colours[i % len(self._colours)]
 
             # Label
-            p.setPen(QPen(text_col))
-            fm = QFontMetrics(self.font())
-            truncated = fm.elidedText(label, Qt.TextElideMode.ElideMiddle, label_w - 8)
-            p.drawText(0, y + gap + bar_h - 4, truncated)
+            p.setPen(text_col)
+            lbl_rect = QRect(0, y, self._LABEL_W - 8, self._ROW_H)
+            fm = QFontMetrics(font)
+            elided = fm.elidedText(label, Qt.TextElideMode.ElideMiddle, self._LABEL_W - 8)
+            p.drawText(lbl_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, elided)
 
             # Bar
-            p.fillRect(label_w, y + gap, bar_w, bar_h, colour)
+            bar_w = int(bar_area * val / max_val) if max_val else 0
+            bar_rect = QRect(self._LABEL_W, y + 4, bar_w, self._ROW_H - 8)
+            p.setBrush(QBrush(col))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.drawRoundedRect(bar_rect, 3, 3)
 
-            # Value text
-            p.setPen(QPen(dim_col))
-            val_str = human_readable_size(value) if self._unit == "bytes" else f"{value:,}"
-            p.drawText(label_w + bar_w + 6, y + gap + bar_h - 4, val_str)
+            # Value label
+            p.setPen(dim_col)
+            val_rect = QRect(self._LABEL_W + bar_area + 4, y, self._VAL_W, self._ROW_H)
+            p.drawText(val_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                       self._fmt(val))
 
         p.end()
 
 
+class _StackedBar(QWidget):
+    """Single horizontal stacked bar for image vs video breakdown."""
+
+    _H = 28
+
+    def __init__(self, images: int, videos: int, parent=None) -> None:
+        super().__init__(parent)
+        self._images = images
+        self._videos = videos
+        self.setFixedHeight(self._H + 28)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+    def paintEvent(self, _event: QPaintEvent) -> None:
+        total = self._images + self._videos
+        if total == 0:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W = self.width()
+        font = QFont(); font.setPointSize(9)
+        p.setFont(font)
+
+        img_w = int(W * self._images / total)
+        vid_w = W - img_w
+
+        p.setBrush(QBrush(_BLUE)); p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(QRect(0, 0, img_w, self._H), 4, 4)
+        p.setBrush(QBrush(_PURPLE)); p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(QRect(img_w, 0, vid_w, self._H), 4, 4)
+
+        legend_col = self.palette().text().color()
+        p.setPen(legend_col)
+        pct_img = self._images * 100 // total
+        p.drawText(QRect(0, self._H + 4, W // 2, 20),
+                   Qt.AlignmentFlag.AlignLeft,
+                   f"■ Images: {self._images:,}  ({pct_img}%)")
+        p.drawText(QRect(W // 2, self._H + 4, W // 2, 20),
+                   Qt.AlignmentFlag.AlignLeft,
+                   f"■ Videos: {self._videos:,}  ({100 - pct_img}%)")
+        p.end()
+
+
+def _section(title: str) -> QLabel:
+    lbl = QLabel(title)
+    lbl.setStyleSheet("font-size: 13px; font-weight: bold; color: #ff9800; margin-top: 8px;")
+    return lbl
+
+
+def _scrollable(inner: QWidget) -> QScrollArea:
+    sa = QScrollArea()
+    sa.setWidget(inner)
+    sa.setWidgetResizable(True)
+    sa.setFrameShape(QFrame.Shape.NoFrame)
+    sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    return sa
+
+
 # ---------------------------------------------------------------------------
-# Main dashboard
+# Individual tab content builders
+# ---------------------------------------------------------------------------
+
+def _build_overview(result: ScanResult) -> QWidget:
+    """Tab 1 — Summary cards, media type bar, top 10 folders."""
+    root = QWidget()
+    lay = QVBoxLayout(root)
+    lay.setContentsMargins(0, 8, 0, 8)
+    lay.setSpacing(10)
+
+    # Stat cards
+    cards_row = QHBoxLayout()
+    cards_row.setSpacing(8)
+    cards = [
+        (_StatCard(f"{result.total_files:,}",   "Total Media Files",  _ORANGE)),
+        (_StatCard(human_readable_size(result.total_size_bytes), "Total Media Size", _GREEN)),
+        (_StatCard(f"{result.image_count:,}",   "Images",             _BLUE)),
+        (_StatCard(f"{result.video_count:,}",   "Videos",             _PURPLE)),
+        (_StatCard(f"{result.folder_count:,}",  "Folders w/ Media",   _TEAL)),
+    ]
+    for c in cards:
+        cards_row.addWidget(c)
+    lay.addLayout(cards_row)
+
+    note = QLabel(
+        "ℹ  Total Media Size = combined size of all media files found. "
+        "This is the amount of data that would be transferred."
+    )
+    note.setWordWrap(True)
+    note.setObjectName("hintLabel")
+    note.setStyleSheet("font-size: 10px; padding: 2px 0;")
+    lay.addWidget(note)
+
+    # Image vs Video bar
+    if result.total_files > 0:
+        lay.addWidget(_section("Media Type Breakdown"))
+        lay.addWidget(_StackedBar(result.image_count, result.video_count))
+
+    # Top 10 folders
+    if result.top_folders:
+        lay.addWidget(_section("Top 10 Largest Folders  (by media file size)"))
+        rows = [(n.path.name, n.total_size_bytes, result.total_size_bytes)
+                for n in result.top_folders]
+        lay.addWidget(_HBarChart(rows, _BAR_COLOURS,
+                                  fmt_fn=human_readable_size))
+
+    lay.addStretch()
+
+    container = QWidget()
+    cl = QVBoxLayout(container)
+    cl.setContentsMargins(16, 0, 16, 0)
+    cl.addWidget(root)
+    return _scrollable(container)
+
+
+def _build_timeline(result: ScanResult) -> QWidget:
+    """Tab 2 — Year-by-year file distribution."""
+    root = QWidget()
+    lay = QVBoxLayout(root)
+    lay.setContentsMargins(0, 8, 0, 8)
+    lay.setSpacing(10)
+
+    if not result.year_dist:
+        lay.addWidget(QLabel("No date information available."))
+        lay.addStretch()
+        return _scrollable(root)
+
+    lay.addWidget(_section("Files by Year  (based on last-modified date)"))
+
+    years = sorted(result.year_dist.keys())
+    rows_count = [(str(y), result.year_dist[y][0], max(v[0] for v in result.year_dist.values()))
+                  for y in years]
+    rows_size  = [(str(y), result.year_dist[y][1], max(v[1] for v in result.year_dist.values()))
+                  for y in years]
+
+    lbl_c = QLabel("File Count")
+    lbl_c.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 4px;")
+    lay.addWidget(lbl_c)
+    chart_c = _HBarChart(rows_count, [_BLUE] * len(years),
+                          fmt_fn=lambda v: f"{v:,} files")
+    chart_c.setFixedHeight(len(years) * 32 + 8)
+    lay.addWidget(chart_c)
+
+    lbl_s = QLabel("Storage Size")
+    lbl_s.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+    lay.addWidget(lbl_s)
+    chart_s = _HBarChart(rows_size, [_ORANGE] * len(years),
+                          fmt_fn=human_readable_size)
+    chart_s.setFixedHeight(len(years) * 32 + 8)
+    lay.addWidget(chart_s)
+
+    # Summary stats
+    oldest = min(years)
+    newest = max(years)
+    peak_y = max(result.year_dist, key=lambda y: result.year_dist[y][0])
+    summary = QLabel(
+        f"📅  Library spans <b>{oldest}</b> → <b>{newest}</b>  "
+        f"({newest - oldest + 1} years)    "
+        f"·    Peak year: <b>{peak_y}</b> "
+        f"({result.year_dist[peak_y][0]:,} files)"
+    )
+    summary.setWordWrap(True)
+    summary.setStyleSheet("font-size: 12px; margin-top: 8px; padding: 6px; "
+                          "background: #2a2a3e; border-radius: 6px;")
+    lay.addWidget(summary)
+    lay.addStretch()
+
+    container = QWidget()
+    cl = QVBoxLayout(container)
+    cl.setContentsMargins(16, 0, 16, 0)
+    cl.addWidget(root)
+    return _scrollable(container)
+
+
+def _build_file_types(result: ScanResult) -> QWidget:
+    """Tab 3 — Per-extension breakdown sorted by size."""
+    root = QWidget()
+    lay = QVBoxLayout(root)
+    lay.setContentsMargins(0, 8, 0, 8)
+    lay.setSpacing(10)
+
+    if not result.ext_stats:
+        lay.addWidget(QLabel("No file type data available."))
+        lay.addStretch()
+        return _scrollable(root)
+
+    lay.addWidget(_section("File Types  (sorted by storage size)"))
+
+    sorted_exts = sorted(result.ext_stats.items(), key=lambda kv: kv[1][1], reverse=True)
+    max_bytes = sorted_exts[0][1][1] if sorted_exts else 1
+
+    rows_size  = [(ext.lstrip(".").upper(), kv[1], max_bytes) for ext, kv in sorted_exts]
+    rows_count = [(ext.lstrip(".").upper(), kv[0], max(v[0] for _, v in sorted_exts))
+                  for ext, kv in sorted_exts]
+
+    lbl_s = QLabel("Storage Size per Type")
+    lbl_s.setStyleSheet("font-size: 11px; font-weight: bold;")
+    lay.addWidget(lbl_s)
+    chart_s = _HBarChart(rows_size, _BAR_COLOURS, fmt_fn=human_readable_size)
+    chart_s.setFixedHeight(len(sorted_exts) * 32 + 8)
+    lay.addWidget(chart_s)
+
+    lbl_c = QLabel("File Count per Type")
+    lbl_c.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+    lay.addWidget(lbl_c)
+    chart_c = _HBarChart(rows_count, _BAR_COLOURS, fmt_fn=lambda v: f"{v:,}")
+    chart_c.setFixedHeight(len(sorted_exts) * 32 + 8)
+    lay.addWidget(chart_c)
+
+    lay.addStretch()
+
+    container = QWidget()
+    cl = QVBoxLayout(container)
+    cl.setContentsMargins(16, 0, 16, 0)
+    cl.addWidget(root)
+    return _scrollable(container)
+
+
+def _build_stale(result: ScanResult, on_archive) -> QWidget:
+    """Tab 4 — Stale data by last-modified age with action buttons."""
+    root = QWidget()
+    lay = QVBoxLayout(root)
+    lay.setContentsMargins(16, 8, 16, 8)
+    lay.setSpacing(10)
+
+    lay.addWidget(_section("Stale Data  (by last-modified date)"))
+
+    intro = QLabel(
+        "Files that haven't been modified in a long time are good candidates "
+        "for archiving to a cold-storage drive or deletion.\n"
+        "Click <b>Archive</b> to route these folders into a new transfer."
+    )
+    intro.setWordWrap(True)
+    intro.setObjectName("hintLabel")
+    intro.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
+    lay.addWidget(intro)
+
+    buckets = [
+        ("3m+",  "Not modified in 3+ months",  _AMBER),
+        ("6m+",  "Not modified in 6+ months",  _ORANGE),
+        ("1y+",  "Not modified in 1+ year",    _RED),
+        ("2y+",  "Not modified in 2+ years",   QColor("#b71c1c")),
+    ]
+
+    for key, label, col in buckets:
+        data = result.stale_buckets.get(key, [0, 0])
+        count, size = data[0], data[1]
+        folders = result.stale_folders.get(key, set())
+
+        card = QFrame()
+        card.setStyleSheet(
+            "QFrame { background: #2a2a3e; border-radius: 8px; border-left: 4px solid "
+            + col.name() + "; }"
+        )
+        card_lay = QHBoxLayout(card)
+        card_lay.setContentsMargins(14, 10, 14, 10)
+
+        info = QVBoxLayout()
+        title_lbl = QLabel(label)
+        title_lbl.setStyleSheet(f"font-weight: bold; font-size: 12px; color: {col.name()};")
+        info.addWidget(title_lbl)
+
+        stat_lbl = QLabel(
+            f"{count:,} files  ·  {human_readable_size(size)}  "
+            f"·  {len(folders)} folder{'s' if len(folders) != 1 else ''}"
+            if count else "No stale files found in this range."
+        )
+        stat_lbl.setObjectName("hintLabel")
+        stat_lbl.setStyleSheet("font-size: 11px;")
+        info.addWidget(stat_lbl)
+
+        card_lay.addLayout(info, stretch=1)
+
+        if count > 0:
+            btn = QPushButton("Archive →")
+            btn.setFixedSize(100, 32)
+            btn.setStyleSheet(
+                f"QPushButton {{ background: {col.name()}; color: #000; font-weight: bold; "
+                f"border-radius: 4px; border: none; }}"
+                f"QPushButton:hover {{ background: #ffb74d; }}"
+            )
+            folder_list = list(folders)
+            btn.clicked.connect(lambda _, fl=folder_list, bk=key: on_archive(fl, bk))
+            card_lay.addWidget(btn)
+
+        lay.addWidget(card)
+
+    lay.addStretch()
+    container = QWidget()
+    cl = QVBoxLayout(container)
+    cl.setContentsMargins(0, 0, 0, 0)
+    cl.addWidget(root)
+    return _scrollable(container)
+
+
+def _build_folder_intel(result: ScanResult) -> QWidget:
+    """Tab 5 — Largest folders, deepest paths, most-files folders."""
+    root = QWidget()
+    lay = QVBoxLayout(root)
+    lay.setContentsMargins(0, 8, 0, 8)
+    lay.setSpacing(10)
+
+    # Top 10 by size
+    if result.top_folders:
+        lay.addWidget(_section("Top 10 Largest Folders"))
+        rows = [(f"{n.path.name}  ({n.path.parent.name})",
+                 n.total_size_bytes,
+                 result.total_size_bytes or 1)
+                for n in result.top_folders]
+        chart = _HBarChart(rows, _BAR_COLOURS, fmt_fn=human_readable_size)
+        chart.setFixedHeight(len(rows) * 32 + 8)
+        lay.addWidget(chart)
+
+    # Top 10 by file count
+    if result.folder_nodes:
+        lay.addWidget(_section("Most Files in a Single Folder"))
+        top_count = sorted(result.folder_nodes,
+                           key=lambda n: n.file_count, reverse=True)[:10]
+        max_c = top_count[0].file_count if top_count else 1
+        rows_c = [(f"{n.path.name}  ({n.path.parent.name})",
+                   n.file_count, max_c)
+                  for n in top_count]
+        chart_c = _HBarChart(rows_c, [_TEAL] * 10, fmt_fn=lambda v: f"{v:,} files")
+        chart_c.setFixedHeight(len(rows_c) * 32 + 8)
+        lay.addWidget(chart_c)
+
+    # Deep folders
+    if result.deep_folders:
+        lay.addWidget(_section("Deeply Nested Folders  (may be forgotten data)"))
+        for path, depth in result.deep_folders[:10]:
+            lbl = QLabel(f"  Depth {depth}  ·  {path}")
+            lbl.setObjectName("hintLabel")
+            lbl.setStyleSheet("font-size: 10px; font-family: monospace;")
+            lbl.setWordWrap(True)
+            lay.addWidget(lbl)
+
+    lay.addStretch()
+
+    container = QWidget()
+    cl = QVBoxLayout(container)
+    cl.setContentsMargins(16, 0, 16, 0)
+    cl.addWidget(root)
+    return _scrollable(container)
+
+
+# ---------------------------------------------------------------------------
+# Main widget
 # ---------------------------------------------------------------------------
 
 class ScanDashboardWidget(QWidget):
-    """Full scan results dashboard with charts and smart insights.
+    """Tabbed scan analysis dashboard.
 
-    Call :meth:`populate` after the scan completes.
+    Signals:
+        stale_route_requested(list[Path], str):
+            Emitted when user clicks Archive on a stale bucket.
+            Carries (folder_paths, bucket_key).
     """
 
-    def __init__(self, parent=None) -> None:
+    stale_route_requested = pyqtSignal(list, str)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._build_ui()
+        self._result: ScanResult | None = None
+        self._tabs = QTabWidget()
+        self._tabs.setDocumentMode(True)
+        self._tabs.setStyleSheet(
+            "QTabBar::tab { padding: 8px 18px; font-size: 12px; }"
+            "QTabBar::tab:selected { color: #ff9800; border-bottom: 2px solid #ff9800; }"
+        )
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self._tabs)
 
-    def _build_ui(self) -> None:
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        self._content = QWidget()
-        self._layout = QVBoxLayout(self._content)
-        self._layout.setContentsMargins(0, 0, 8, 0)
-        self._layout.setSpacing(16)
-        scroll.setWidget(self._content)
-        outer.addWidget(scroll)
-
-    def populate(self, result: ScanResult, insights=None) -> None:
-        """Rebuild the dashboard from scan results and optional smart insights.
+    def populate(self, result: ScanResult, insights: Any = None) -> None:
+        """Populate all tabs from a completed scan result.
 
         Args:
             result: Completed :class:`ScanResult`.
-            insights: Optional :class:`SmartInsights` from the analyzer.
+            insights: Optional :class:`SmartInsights` (used in overview).
         """
-        # Clear previous content
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+        self._result = result
+        self._tabs.clear()
 
-        self._add_stat_cards(result)
-        self._add_stacked_bar(result)
-        self._add_top_folders_chart(result)
-        if insights:
-            self._add_insights_panel(insights)
-        self._layout.addStretch()
+        self._tabs.addTab(_build_overview(result),    "📊  Overview")
+        self._tabs.addTab(_build_timeline(result),    "📅  Timeline")
+        self._tabs.addTab(_build_file_types(result),  "🗂  File Types")
+        self._tabs.addTab(_build_stale(result, self._on_archive), "🕰  Stale Data")
+        self._tabs.addTab(_build_folder_intel(result), "📁  Folder Intel")
 
-    # ------------------------------------------------------------------
-
-    def _add_stat_cards(self, result: ScanResult) -> None:
-        """Add the top row of stat cards.
-
-        Args:
-            result: Scan result.
-        """
-        row = QHBoxLayout()
-        row.setSpacing(10)
-        cards = [
-            ("Total Media Files", f"{result.total_files:,}", _C_ORANGE),
-            ("Total Media Size",  human_readable_size(result.total_size_bytes), _C_GREEN),
-            ("Images",            f"{result.image_count:,}", _C_BLUE),
-            ("Videos",            f"{result.video_count:,}", _C_PURPLE),
-            ("Folders w/ Media",  f"{result.folder_count:,}", _C_TEAL),
-        ]
-        for label, value, colour in cards:
-            row.addWidget(_StatCard(label, value, colour))
-        container = QWidget()
-        container.setLayout(row)
-        self._layout.addWidget(container)
-
-        # Clarifying note about "Total Media Size"
-        note = QLabel(
-            "ℹ  <b>Total Media Size</b> = combined size of all media files found "
-            "in the scanned folders.  This is the amount of data that would be transferred."
-        )
-        note.setWordWrap(True)
-        note.setTextFormat(Qt.TextFormat.RichText)
-        note.setObjectName("hintLabel")
-        note.setStyleSheet("font-size: 11px; padding: 2px 0;")
-        self._layout.addWidget(note)
-
-    def _add_stacked_bar(self, result: ScanResult) -> None:
-        """Add Images vs Videos stacked bar.
-
-        Args:
-            result: Scan result.
-        """
-        lbl = QLabel("Media Type Breakdown")
-        lbl.setStyleSheet("font-weight: bold; color: #ff9800;")
-        self._layout.addWidget(lbl)
-
-        bar = _StackedBar(
-            "Images", result.image_count, _C_BLUE,
-            "Videos", result.video_count, _C_PURPLE,
-        )
-        self._layout.addWidget(bar)
-
-    def _add_top_folders_chart(self, result: ScanResult) -> None:
-        """Add top-5 folders horizontal bar chart.
-
-        Args:
-            result: Scan result.
-        """
-        if not result.top_folders:
-            return
-        lbl = QLabel("Top 5 Largest Folders  (by media file size)")
-        lbl.setStyleSheet("font-weight: bold; color: #ff9800; margin-top: 4px;")
-        self._layout.addWidget(lbl)
-
-        items = [
-            (n.name, n.total_size_bytes)
-            for n in result.top_folders
-        ]
-        chart = _HBarChart(items, unit="bytes")
-        self._layout.addWidget(chart)
-
-    def _add_insights_panel(self, insights) -> None:
-        """Add the smart insights section.
-
-        Args:
-            insights: :class:`SmartInsights` from the analyzer.
-        """
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("border: 1px solid #3a3a5a;")
-        self._layout.addWidget(sep)
-
-        title = QLabel("🔍 Smart Insights  (sampled EXIF analysis)")
-        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #ff9800;")
-        self._layout.addWidget(title)
-
-        # Recommendation banner
-        if insights.recommendation:
-            rec = QLabel(insights.recommendation)
-            rec.setWordWrap(True)
-            rec.setStyleSheet(
-                "background: #1e3a2e; border: 1px solid #4caf50; border-radius: 6px; "
-                "padding: 10px; color: #e0e0e0; font-size: 12px;"
-            )
-            self._layout.addWidget(rec)
-
-        # Cameras
-        if insights.top_cameras:
-            cam_lbl = QLabel("📷 Detected Cameras / Devices")
-            cam_lbl.setStyleSheet("font-weight: bold; margin-top: 6px;")
-            self._layout.addWidget(cam_lbl)
-            cam_items = [(name, count) for name, count in insights.top_cameras]
-            cam_chart = _HBarChart(cam_items)
-            self._layout.addWidget(cam_chart)
-
-        # Stats row: events, GPS, year range, sampled
-        stats_row = QHBoxLayout()
-        stats_row.setSpacing(10)
-        y0, y1 = insights.year_range
-        year_str = f"{y0} – {y1}" if y0 and y1 else "—"
-        stat_items = [
-            ("Shooting Events", str(insights.event_count), _C_GREEN),
-            ("Year Range", year_str, _C_BLUE),
-            ("Peak Year", str(insights.peak_year or "—"), _C_ORANGE),
-            ("GPS Coverage", f"{insights.gps_percent:.0f}%", _C_TEAL),
-            ("Files Sampled", f"{insights.total_sampled:,}", _C_DIM),
-        ]
-        for label, value, colour in stat_items:
-            stats_row.addWidget(_StatCard(label, value, colour))
-        container = QWidget()
-        container.setLayout(stats_row)
-        self._layout.addWidget(container)
-
-        # Year distribution mini-bar
-        year_dist = insights.raw_stats.get("year_distribution", {})
-        if year_dist:
-            yr_lbl = QLabel("📅 Files per Year  (sampled)")
-            yr_lbl.setStyleSheet("font-weight: bold; margin-top: 4px;")
-            self._layout.addWidget(yr_lbl)
-            yr_items = [(str(yr), cnt) for yr, cnt in sorted(year_dist.items())]
-            yr_chart = _HBarChart(yr_items)
-            self._layout.addWidget(yr_chart)
+    def _on_archive(self, folders: list[Path], bucket: str) -> None:
+        self.stale_route_requested.emit(folders, bucket)

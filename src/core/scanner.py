@@ -11,8 +11,11 @@ Author: Nathan
 import logging
 import os
 import threading
+import time as _time_mod
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 import psutil
@@ -142,32 +145,45 @@ def get_subfolders(folder: Path) -> list[tuple[Path, str]]:
     return results
 
 
+# ---------------------------------------------------------------------------
+# Analysis data accumulator (collected during scan, zero extra I/O)
+# ---------------------------------------------------------------------------
+
+# Stale age thresholds in seconds
+_STALE_THRESHOLDS: dict[str, float] = {
+    "3m+": 90 * 86400,
+    "6m+": 180 * 86400,
+    "1y+": 365 * 86400,
+    "2y+": 730 * 86400,
+}
+
+
+@dataclass
+class _AnalysisAccum:
+    """Mutable accumulator for per-root analysis data."""
+    ext_stats:    dict[str, list[int]] = field(default_factory=dict)
+    year_dist:    dict[int, list[int]] = field(default_factory=dict)
+    stale_counts: dict[str, list[int]] = field(default_factory=lambda: {k: [0, 0] for k in _STALE_THRESHOLDS})
+    stale_folders: dict[str, set]      = field(default_factory=lambda: {k: set() for k in _STALE_THRESHOLDS})
+
+
 def _scan_one_root(
     root: Path,
     exclusions: set[str],
     cancel: threading.Event,
-    progress_cb,          # callable(root_str, folder_str, delta_images, delta_videos, delta_bytes)
+    progress_cb,
     extensions: set[str] | None = None,
-) -> dict[Path, FolderNode]:
-    """Scan a single root folder using os.scandir (non-recursive stack walk).
-
-    Args:
-        root: Root folder path.
-        exclusions: Lowercase folder names to skip.
-        cancel: Cancellation event.
-        progress_cb: Callback for incremental progress updates.
-        extensions: Allowed file extensions. Defaults to MEDIA_EXTENSIONS.
-
-    Returns:
-        Dict mapping folder path → :class:`FolderNode`.
-    """
+) -> tuple[dict[Path, FolderNode], _AnalysisAccum]:
+    """Scan a single root folder, collecting analysis data at no extra I/O cost."""
     allowed_exts = extensions if extensions else MEDIA_EXTENSIONS
     folder_map: dict[Path, FolderNode] = {}
+    accum = _AnalysisAccum()
     stack: deque[str] = deque([str(root)])
     batch_images = 0
     batch_videos = 0
     batch_bytes = 0
     current_folder = str(root)
+    now_ts = _time_mod.time()
 
     while stack and not cancel.is_set():
         dir_path = stack.pop()
@@ -198,11 +214,39 @@ def _scan_one_root(
                 node = folder_map[parent]
                 node.file_count += 1
                 try:
-                    size = entry.stat().st_size
-                    node.total_size_bytes += size
-                    batch_bytes += size
+                    st = entry.stat()
+                    size = st.st_size
+                    mtime = st.st_mtime
                 except OSError:
                     size = 0
+                    mtime = now_ts
+
+                node.total_size_bytes += size
+                batch_bytes += size
+
+                # Extension stats
+                rec = accum.ext_stats.setdefault(ext, [0, 0])
+                rec[0] += 1
+                rec[1] += size
+
+                # Year distribution
+                try:
+                    year = datetime.fromtimestamp(mtime).year
+                except (OSError, OverflowError, ValueError):
+                    year = 0
+                if 1980 < year < 2100:
+                    yrec = accum.year_dist.setdefault(year, [0, 0])
+                    yrec[0] += 1
+                    yrec[1] += size
+
+                # Stale buckets
+                age_s = now_ts - mtime
+                for bucket, threshold in _STALE_THRESHOLDS.items():
+                    if age_s >= threshold:
+                        accum.stale_counts[bucket][0] += 1
+                        accum.stale_counts[bucket][1] += size
+                        accum.stale_folders[bucket].add(parent)
+
                 if ext in IMAGE_EXTENSIONS:
                     batch_images += 1
                 elif ext in VIDEO_EXTENSIONS:
@@ -214,11 +258,10 @@ def _scan_one_root(
                     batch_videos = 0
                     batch_bytes = 0
 
-    # Flush remaining
     if batch_images + batch_videos > 0:
         progress_cb(str(root), current_folder, batch_images, batch_videos, batch_bytes)
 
-    return folder_map
+    return folder_map, accum
 
 
 def _deduplicate_folders(folders: list[Path]) -> list[Path]:
@@ -317,6 +360,12 @@ class ScanWorker(QThread):
                 _last_emit[0] = now
             self.progress_updated.emit(root, folder, total)
 
+        # Merged analysis accumulators across all roots
+        merged_ext:   dict[str, list[int]] = {}
+        merged_year:  dict[int, list[int]] = {}
+        merged_stale: dict[str, list[int]] = {k: [0, 0] for k in _STALE_THRESHOLDS}
+        merged_stale_folders: dict[str, set] = {k: set() for k in _STALE_THRESHOLDS}
+
         max_workers = min(len(self._scan_folders), 4)
         with ThreadPoolExecutor(max_workers=max(max_workers, 1)) as pool:
             futures = {
@@ -333,16 +382,38 @@ class ScanWorker(QThread):
             }
             for future in as_completed(futures):
                 try:
-                    result_map = future.result()
+                    result_map, accum = future.result()
                     for path, node in result_map.items():
                         if path in combined:
                             combined[path].file_count += node.file_count
                             combined[path].total_size_bytes += node.total_size_bytes
                         else:
                             combined[path] = node
+                    # Merge analysis data
+                    for ext, (cnt, byt) in accum.ext_stats.items():
+                        r = merged_ext.setdefault(ext, [0, 0])
+                        r[0] += cnt; r[1] += byt
+                    for yr, (cnt, byt) in accum.year_dist.items():
+                        r = merged_year.setdefault(yr, [0, 0])
+                        r[0] += cnt; r[1] += byt
+                    for bkt in _STALE_THRESHOLDS:
+                        merged_stale[bkt][0] += accum.stale_counts[bkt][0]
+                        merged_stale[bkt][1] += accum.stale_counts[bkt][1]
+                        merged_stale_folders[bkt].update(accum.stale_folders[bkt])
                 except Exception as exc:
                     logger.error("Scan thread error: %s", exc)
                     self.error_occurred.emit(str(exc))
+
+        # Compute deep folders (depth from drive root > 5)
+        deep: list[tuple] = []
+        for p in combined:
+            try:
+                depth = len(p.relative_to(p.anchor).parts)
+                if depth > 5:
+                    deep.append((p, depth))
+            except ValueError:
+                pass
+        deep.sort(key=lambda t: t[1], reverse=True)
 
         result = ScanResult(
             drives_scanned=sorted({str(f.drive) for f in self._scan_folders}),
@@ -351,8 +422,13 @@ class ScanWorker(QThread):
             total_size_bytes=self._total_bytes,
             image_count=self._total_images,
             video_count=self._total_videos,
+            ext_stats=merged_ext,
+            year_dist=merged_year,
+            stale_buckets=merged_stale,
+            stale_folders=merged_stale_folders,
+            deep_folders=deep[:20],
         )
         result.top_folders = sorted(
             result.folder_nodes, key=lambda n: n.total_size_bytes, reverse=True
-        )[:5]
+        )[:10]
         self.scan_complete.emit(result)

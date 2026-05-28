@@ -145,6 +145,7 @@ class InitialScanStep(QWidget):
         # ── Dashboard (visible after analysis) ───────────────────────
         self._dashboard = ScanDashboardWidget()
         self._dashboard.hide()
+        self._dashboard.stale_route_requested.connect(self._on_stale_archive)
         layout.addWidget(self._dashboard, stretch=1)
 
         # ── Rescan button ─────────────────────────────────────────────
@@ -328,6 +329,16 @@ class InitialScanStep(QWidget):
 
         # Re-populate with full insights
         self._dashboard.populate(self._state.scan_result, insights)
+
+    @pyqtSlot(list, str)
+    def _on_stale_archive(self, folders: list, bucket: str) -> None:
+        """User clicked Archive on a stale bucket — pre-load those folders and advance."""
+        from pathlib import Path
+        folder_paths = [p if isinstance(p, Path) else Path(p) for p in folders]
+        # Override selected folders with just the stale set, then go to destination
+        self._state.selected_scan_folders = folder_paths
+        logger.info("Stale archive: routing %d folders (bucket=%s)", len(folder_paths), bucket)
+        self.next_requested.emit()
 
     @pyqtSlot(str)
     def _on_error(self, message: str) -> None:
