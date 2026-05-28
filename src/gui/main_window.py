@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QRect, QPointF, QSize, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QPen, QPolygonF, QPixmap, QIcon
+from src.gui.update_dialog import UpdateDialog
 
 _ICON_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "icon_512.png"
 
@@ -251,25 +252,39 @@ class MainWindow(QMainWindow):
         self._update_checker.update_available.connect(self._on_update_available)
         self._update_checker.start()
 
-    def _on_update_available(self, latest: str) -> None:
-        """Show the update button when a newer version exists on GitHub."""
+    def _on_update_available(self, latest: str, download_url: str) -> None:
+        """Show the update button (and store download URL) when newer version found."""
+        self._pending_update_url = download_url
         self._update_btn.setText(f"⬆  v{latest} available")
         self._update_btn.setToolTip(
-            f"Mediagator v{latest} is available — click to download from GitHub"
+            f"Mediagator v{latest} is available — click to update"
+        )
+        # Disconnect the old "open releases page" handler and wire update dialog
+        try:
+            self._update_btn.clicked.disconnect()
+        except RuntimeError:
+            pass
+        self._update_btn.clicked.connect(
+            lambda: self._show_update_dialog(latest, download_url)
         )
         self._update_btn.show()
         logger.info("Update available: v%s (running v%s)", latest, APP_VERSION)
+
+    def _show_update_dialog(self, version: str, download_url: str) -> None:
+        """Open the update dialog."""
+        dlg = UpdateDialog(version, download_url, self)
+        dlg.exec()
 
 
 class _UpdateChecker(QThread):
     """Background thread that checks GitHub for a newer release.
 
-    Emits ``update_available(str)`` with the latest version tag if it is
-    newer than the currently running version.  Runs once on startup and
-    silently swallows all network errors.
+    Emits ``update_available(version, download_url)`` when a newer release
+    exists and has a matching ``.exe`` installer asset.  Runs once on startup
+    and silently swallows all network/parse errors.
     """
 
-    update_available = pyqtSignal(str)
+    update_available = pyqtSignal(str, str)  # (version, download_url)
 
     def __init__(self, current_version: str, parent=None) -> None:
         super().__init__(parent)
@@ -280,17 +295,32 @@ class _UpdateChecker(QThread):
         try:
             import urllib.request
             import json
+            from src.config.constants import GITHUB_LATEST_API, GITHUB_RELEASES_URL
 
-            from src.config.constants import GITHUB_LATEST_API
             req = urllib.request.Request(
                 GITHUB_LATEST_API,
                 headers={"User-Agent": "Mediagator-update-check"},
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode())
+
             tag = data.get("tag_name", "").lstrip("v")
-            if tag and tag != self._current and self._is_newer(tag):
-                self.update_available.emit(tag)
+            if not tag or not self._is_newer(tag):
+                return
+
+            # Look for an installer asset (.exe) in the release assets
+            download_url = ""
+            for asset in data.get("assets", []):
+                name: str = asset.get("name", "")
+                if name.lower().endswith(".exe") and "setup" in name.lower():
+                    download_url = asset.get("browser_download_url", "")
+                    break
+
+            # Fall back to the releases page URL if no asset found yet
+            if not download_url:
+                download_url = GITHUB_RELEASES_URL
+
+            self.update_available.emit(tag, download_url)
         except Exception:
             pass  # network unavailable, behind proxy, rate-limited — all fine
 
