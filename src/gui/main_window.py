@@ -23,7 +23,7 @@ _ICON_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "icon_51
 
 from src.config.constants import (
     WINDOW_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, STEP_NAMES,
-    APP_VERSION, GITHUB_RELEASES_URL,
+    APP_VERSION, GITHUB_RELEASES_URL, DONATE_URL,
 )
 from src.config.settings import save_settings
 from src.gui.wizard_state import WizardState
@@ -123,6 +123,19 @@ class MainWindow(QMainWindow):
 
         header_layout.addWidget(brand_widget)
         header_layout.addStretch()
+
+        # Donate button
+        donate_btn = QPushButton("♥  Support")
+        donate_btn.setFixedHeight(26)
+        donate_btn.setToolTip("Mediagator is free — buy me a coffee if it saves you time!")
+        donate_btn.setStyleSheet(
+            "QPushButton { background: transparent; border: 1px solid #e05c7a;"
+            " border-radius: 5px; color: #e05c7a; font-size: 11px;"
+            " font-weight: bold; padding: 0 10px; }"
+            "QPushButton:hover { background: #e05c7a; color: #fff; }"
+        )
+        donate_btn.clicked.connect(lambda: webbrowser.open(DONATE_URL))
+        header_layout.addWidget(donate_btn)
 
         # About / Welcome button
         about_btn = QPushButton("?")

@@ -213,6 +213,7 @@ APP_NAME = "Mediagator"
 APP_VERSION = "1.0.2"
 GITHUB_RELEASES_URL = "https://github.com/nathanokh1/Mediagator/releases"
 GITHUB_LATEST_API = "https://api.github.com/repos/nathanokh1/Mediagator/releases/latest"
+DONATE_URL = "https://buymeacoffee.com/nathanokh"  # update if you switch platforms
 APPDATA_DIR: Path = Path(os.environ.get("APPDATA", Path.home())) / APP_NAME
 SETTINGS_FILE: Path = APPDATA_DIR / "settings.json"
 SESSION_FILE: Path = APPDATA_DIR / "session_state.json"

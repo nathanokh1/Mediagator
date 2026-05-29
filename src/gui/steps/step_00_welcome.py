@@ -23,6 +23,7 @@ from PyQt6.QtGui import QFont, QPixmap
 
 from src.gui.wizard_state import WizardState
 from src.config.settings import save_settings
+from src.config.constants import DONATE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -167,20 +168,33 @@ class WelcomeStep(QWidget):
         nav_layout = QHBoxLayout(nav_widget)
         nav_layout.setContentsMargins(16, 8, 16, 8)
 
-        # disclaimer blurb
+        # disclaimer + donate row
         disclaimer = QLabel(
-            "Mediagator is provided <b>free of charge</b> with no warranty. "
-            "Use at your own risk. Contributions and donations are appreciated — "
-            "they help keep this tool maintained and free."
+            "Mediagator is <b>free &amp; open-source</b>. "
+            "If it saves you time, a coffee goes a long way. "
+            "No pressure — thank you for using it. ♥"
         )
+        disclaimer.setTextFormat(Qt.TextFormat.RichText)
         disclaimer.setWordWrap(True)
-        disclaimer.setStyleSheet("color: #666; font-size: 10px;")
+        disclaimer.setObjectName("hintLabel")
+        disclaimer.setStyleSheet("font-size: 10px;")
         disclaimer.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
         nav_layout.addWidget(disclaimer, stretch=3)
 
-        nav_layout.addSpacing(16)
+        donate_btn = QPushButton("♥  Buy me a coffee")
+        donate_btn.setToolTip("Support Mediagator — opens buymeacoffee.com")
+        donate_btn.setStyleSheet(
+            "QPushButton { background: transparent; border: 1px solid #e05c7a;"
+            " border-radius: 5px; color: #e05c7a; font-size: 11px;"
+            " font-weight: bold; padding: 4px 12px; }"
+            "QPushButton:hover { background: #e05c7a; color: #fff; }"
+        )
+        donate_btn.clicked.connect(lambda: webbrowser.open(DONATE_URL))
+        nav_layout.addWidget(donate_btn)
+
+        nav_layout.addSpacing(8)
 
         self._no_show_cb = QCheckBox("Don't show this again")
         self._no_show_cb.setObjectName("hintCheck")
