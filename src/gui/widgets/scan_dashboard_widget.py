@@ -358,14 +358,15 @@ def _build_stale(result: ScanResult, on_archive) -> QWidget:
 
     lay.addWidget(_section("Stale Data  (by last-modified date)"))
 
-    intro = QLabel(
-        "Files that haven't been modified in a long time are good candidates "
-        "for archiving to a cold-storage drive or deletion.\n"
-        "Click <b>Archive</b> to route these folders into a new transfer."
-    )
-    intro.setWordWrap(True)
-    intro.setObjectName("hintLabel")
-    intro.setStyleSheet("font-size: 11px; margin-bottom: 4px;")
+        intro = QLabel(
+            "Files that haven't been modified in a long time are good candidates "
+            "for archiving to a cold-storage drive or deletion.  "
+            "Click <b>Archive →</b> to route those folders into a new transfer."
+        )
+        intro.setTextFormat(Qt.TextFormat.RichText)
+        intro.setWordWrap(True)
+        intro.setObjectName("hintLabel")
+        intro.setStyleSheet("font-size: 12px; margin-bottom: 6px;")
     lay.addWidget(intro)
 
     buckets = [
@@ -386,20 +387,24 @@ def _build_stale(result: ScanResult, on_archive) -> QWidget:
             + col.name() + "; }"
         )
         card_lay = QHBoxLayout(card)
-        card_lay.setContentsMargins(14, 10, 14, 10)
+        card_lay.setContentsMargins(16, 14, 16, 14)
 
         info = QVBoxLayout()
         title_lbl = QLabel(label)
-        title_lbl.setStyleSheet(f"font-weight: bold; font-size: 12px; color: {col.name()};")
+        title_lbl.setStyleSheet(f"font-weight: bold; font-size: 14px; color: {col.name()};")
         info.addWidget(title_lbl)
 
-        stat_lbl = QLabel(
-            f"{count:,} files  ·  {human_readable_size(size)}  "
-            f"·  {len(folders)} folder{'s' if len(folders) != 1 else ''}"
-            if count else "No stale files found in this range."
-        )
-        stat_lbl.setObjectName("hintLabel")
-        stat_lbl.setStyleSheet("font-size: 11px;")
+        if count:
+            stat_text = (
+                f"<b>{count:,}</b> files  ·  "
+                f"<b>{human_readable_size(size)}</b>  ·  "
+                f"{len(folders)} folder{'s' if len(folders) != 1 else ''}"
+            )
+        else:
+            stat_text = "No stale files found in this range."
+        stat_lbl = QLabel(stat_text)
+        stat_lbl.setTextFormat(Qt.TextFormat.RichText)
+        stat_lbl.setStyleSheet("font-size: 13px; margin-top: 2px;")
         info.addWidget(stat_lbl)
 
         card_lay.addLayout(info, stretch=1)
