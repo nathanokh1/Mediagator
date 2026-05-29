@@ -1,4 +1,4 @@
-# Mediagator - Windows build script
+﻿# Mediagator - Windows build script
 # Run from repo root in an elevated PowerShell session.
 #
 # Usage:

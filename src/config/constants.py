@@ -1,5 +1,5 @@
-"""
-Mediagator — Application-wide constants.
+﻿"""
+Mediagator â€” Application-wide constants.
 
 Author: Nathan
 """
@@ -22,7 +22,7 @@ VIDEO_EXTENSIONS: set[str] = {
 MEDIA_EXTENSIONS: set[str] = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 
 # ---------------------------------------------------------------------------
-# File type groups — used by the FileTypeFilterWidget in Step 1.
+# File type groups â€” used by the FileTypeFilterWidget in Step 1.
 # Each entry: label shown in UI, list of extensions, default checked state.
 # ---------------------------------------------------------------------------
 AUDIO_EXTENSIONS: set[str] = {
@@ -45,7 +45,7 @@ ALL_EXTENSIONS: set[str] = (
 
 FILE_TYPE_GROUPS: list[dict] = [
     {
-        "name": "📷  Photos",
+        "name": "ðŸ“·  Photos",
         "id": "photos",
         "items": [
             {"label": "JPG / JPEG",       "exts": [".jpg", ".jpeg"],        "default": True},
@@ -57,7 +57,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "📸  RAW / Professional",
+        "name": "ðŸ“¸  RAW / Professional",
         "id": "raw",
         "items": [
             {"label": "RAW",               "exts": [".raw"],                "default": True},
@@ -69,7 +69,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "🎬  Videos",
+        "name": "ðŸŽ¬  Videos",
         "id": "videos",
         "items": [
             {"label": "MP4",               "exts": [".mp4"],                "default": True},
@@ -82,7 +82,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "🎵  Audio",
+        "name": "ðŸŽµ  Audio",
         "id": "audio",
         "items": [
             {"label": "MP3",               "exts": [".mp3"],                "default": False},
@@ -95,7 +95,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "🎨  Creative Files",
+        "name": "ðŸŽ¨  Creative Files",
         "id": "creative",
         "items": [
             {"label": "PSD / PSB  (Photoshop)",   "exts": [".psd", ".psb"],         "default": False},
@@ -106,7 +106,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "📄  Documents",
+        "name": "ðŸ“„  Documents",
         "id": "documents",
         "items": [
             {"label": "PDF",               "exts": [".pdf"],                "default": False},
@@ -121,7 +121,7 @@ FILE_TYPE_GROUPS: list[dict] = [
 DEFAULT_SELECTED_EXTENSIONS: set[str] = MEDIA_EXTENSIONS.copy()
 
 # ---------------------------------------------------------------------------
-# Organisation modes — how transferred folders are arranged at the destination.
+# Organisation modes â€” how transferred folders are arranged at the destination.
 # ---------------------------------------------------------------------------
 class OrgMode:
     """Organisation mode identifiers."""
@@ -132,21 +132,21 @@ class OrgMode:
     FILE_DATE   = "file_date"    # dest/2024/06-June/filename.jpg (flatten & re-sort by individual EXIF)
 
 ORG_MODE_LABELS: dict[str, str] = {
-    OrgMode.YEAR_MONTH: "Year / Month      —  2024 › 06-June › Folder Name",
-    OrgMode.YEAR_ONLY:  "Year only         —  2024 › Folder Name",
-    OrgMode.EVENT_YEAR: "Event under Year  —  2024 › My Event Name  (keeps your folder names)",
-    OrgMode.FLAT:       "No reorganisation —  Folder Name  (copy as-is)",
-    OrgMode.FILE_DATE:  "Flatten by Date   —  2024 › 06-June › filename.jpg  (re-sorts individual files by EXIF)",
+    OrgMode.YEAR_MONTH: "Year / Month      â€”  2024 â€º 06-June â€º Folder Name",
+    OrgMode.YEAR_ONLY:  "Year only         â€”  2024 â€º Folder Name",
+    OrgMode.EVENT_YEAR: "Event under Year  â€”  2024 â€º My Event Name  (keeps your folder names)",
+    OrgMode.FLAT:       "No reorganisation â€”  Folder Name  (copy as-is)",
+    OrgMode.FILE_DATE:  "Flatten by Date   â€”  2024 â€º 06-June â€º filename.jpg  (re-sorts individual files by EXIF)",
 }
 
 DEFAULT_ORG_MODE: str = OrgMode.YEAR_MONTH
 
 # ---------------------------------------------------------------------------
-# Conflict resolution — what to do when a file already exists at destination.
+# Conflict resolution â€” what to do when a file already exists at destination.
 # ---------------------------------------------------------------------------
 class ConflictBehavior:
     """Conflict resolution mode identifiers."""
-    RENAME    = "rename"     # append _1, _2 … to filename (safe default)
+    RENAME    = "rename"     # append _1, _2 â€¦ to filename (safe default)
     SKIP      = "skip"       # leave destination untouched, skip source
     OVERWRITE = "overwrite"  # replace destination file unconditionally
 
@@ -174,7 +174,7 @@ DEFAULT_EXCLUSIONS: set[str] = {
 # Smart folder classification (used in Drive Selection step)
 # ---------------------------------------------------------------------------
 
-# These folder names are almost certainly personal media — auto-check them
+# These folder names are almost certainly personal media â€” auto-check them
 MEDIA_FOLDER_HINTS: set[str] = {
     "pictures", "photos", "photo", "camera", "dcim", "videos", "video",
     "media", "memories", "footage", "raw", "shoots", "shoot", "events",
@@ -185,7 +185,7 @@ MEDIA_FOLDER_HINTS: set[str] = {
     "b-roll", "broll", "highlights", "edits",
 }
 
-# These folder names are OS / application infrastructure — auto-uncheck them
+# These folder names are OS / application infrastructure â€” auto-uncheck them
 SYSTEM_FOLDER_HINTS: set[str] = {
     "windows", "program files", "program files (x86)", "programdata",
     "appdata", "$recycle.bin", "system volume information", "recovery",
@@ -210,7 +210,7 @@ C_DRIVE_SYSTEM_ROOTS: set[str] = {
 # Paths
 # ---------------------------------------------------------------------------
 APP_NAME = "Mediagator"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 GITHUB_RELEASES_URL = "https://github.com/nathanokh1/Mediagator/releases"
 GITHUB_LATEST_API = "https://api.github.com/repos/nathanokh1/Mediagator/releases/latest"
 APPDATA_DIR: Path = Path(os.environ.get("APPDATA", Path.home())) / APP_NAME
@@ -220,12 +220,12 @@ SESSION_FILE: Path = APPDATA_DIR / "session_state.json"
 # ---------------------------------------------------------------------------
 # Transfer thresholds
 # ---------------------------------------------------------------------------
-PHASE_THRESHOLD_SECONDS: int = 3600          # 60 minutes — trigger phased mode
+PHASE_THRESHOLD_SECONDS: int = 3600          # 60 minutes â€” trigger phased mode
 PHASE_TARGET_SECONDS: int = 2700             # ~45 min per phase
 DUPLICATE_FOLDER_NAME: str = "_DUPLICATES_REVIEW"
 DISK_SPEED_TEST_SIZE_MB: int = 50
 DISK_SPEED_TEST_DURATION_S: int = 3
-MULTI_YEAR_THRESHOLD: int = 2                # span > 2 years → MULTI_YEAR flag
+MULTI_YEAR_THRESHOLD: int = 2                # span > 2 years â†’ MULTI_YEAR flag
 CREATION_DATE_TOLERANCE_S: float = 1.0       # seconds tolerance for duplicate check
 
 # ---------------------------------------------------------------------------

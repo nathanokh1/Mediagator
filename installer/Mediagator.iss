@@ -1,4 +1,4 @@
-; Mediagator — Inno Setup Installer Script
+﻿; Mediagator â€” Inno Setup Installer Script
 ; Requires Inno Setup 6.x  (https://jrsoftware.org/isinfo.php)
 ;
 ; To compile:  ISCC.exe installer\Mediagator.iss
@@ -7,7 +7,7 @@
 ; Prerequisite: run build.ps1 first to produce dist\Mediagator\
 
 #define AppName "Mediagator"
-#define AppVersion "1.0.1"
+#define AppVersion "1.0.2"
 #define AppPublisher "Nathan"
 #define AppURL "https://github.com/nathanokh1/Mediagator"
 #define AppExeName "Mediagator.exe"
@@ -72,7 +72,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent shellexec
 
 [UninstallDelete]
-; Remove any user data left in AppData on uninstall (optional — comment out to keep user data)
+; Remove any user data left in AppData on uninstall (optional â€” comment out to keep user data)
 ; Type: filesandordirs; Name: "{localappdata}\Mediagator"
 
 [Code]
