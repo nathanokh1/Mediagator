@@ -7,7 +7,7 @@
 ; Prerequisite: run build.ps1 first to produce dist\Mediagator\
 
 #define AppName "Mediagator"
-#define AppVersion "1.0.3"
+#define AppVersion "1.0.4"
 #define AppPublisher "Nathan"
 #define AppURL "https://github.com/nathanokh1/Mediagator"
 #define AppExeName "Mediagator.exe"
