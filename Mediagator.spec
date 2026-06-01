@@ -18,8 +18,10 @@ a = Analysis(
     pathex=[str(Path('.').resolve())],
     binaries=[],
     datas=[
-        ('assets',          'assets'),          # icons, images
-        ('src/config',      'src/config'),       # constants, settings defaults
+        ('assets', 'assets'),   # icons, images only — no src/* here; physical src/
+                                # directories in datas conflict with PYZ-archived
+                                # src.* modules (Python resolves the namespace package
+                                # from disk and never looks in the archive).
     ],
     hiddenimports=[
         # PyQt6
@@ -44,11 +46,15 @@ a = Analysis(
         # plyer
         'plyer',
         'plyer.platforms.win.notification',
-        # src — all submodules listed explicitly so PyInstaller never misses one
-        # when its static analyser fails to trace a dynamic or late import.
+        # src — package __init__ modules first, then every leaf module.
+        # All listed explicitly so PyInstaller never drops one due to a missed
+        # import in its static analysis pass.
+        'src',
         'src.app',
+        'src.config',
         'src.config.constants',
         'src.config.settings',
+        'src.core',
         'src.core.analyzer',
         'src.core.date_resolver',
         'src.core.duplicate_detector',
@@ -57,9 +63,11 @@ a = Analysis(
         'src.core.scanner',
         'src.core.smart_analyzer',
         'src.core.transfer_engine',
+        'src.gui',
         'src.gui.main_window',
         'src.gui.update_dialog',
         'src.gui.wizard_state',
+        'src.gui.steps',
         'src.gui.steps.step_00_welcome',
         'src.gui.steps.step_01_drive_selection',
         'src.gui.steps.step_02_initial_scan',
@@ -69,6 +77,7 @@ a = Analysis(
         'src.gui.steps.step_06_pre_transfer',
         'src.gui.steps.step_07_progress',
         'src.gui.steps.step_08_report',
+        'src.gui.widgets',
         'src.gui.widgets.drive_card_widget',
         'src.gui.widgets.drive_tree_widget',
         'src.gui.widgets.error_panel_widget',
@@ -78,10 +87,12 @@ a = Analysis(
         'src.gui.widgets.profile_widget',
         'src.gui.widgets.progress_widget',
         'src.gui.widgets.scan_dashboard_widget',
+        'src.models',
         'src.models.folder_node',
         'src.models.scan_result',
         'src.models.transfer_phase',
         'src.models.transfer_plan',
+        'src.utils',
         'src.utils.date_utils',
         'src.utils.exif_reader',
         'src.utils.file_utils',

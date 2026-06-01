@@ -210,7 +210,7 @@ C_DRIVE_SYSTEM_ROOTS: set[str] = {
 # Paths
 # ---------------------------------------------------------------------------
 APP_NAME = "Mediagator"
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 GITHUB_RELEASES_URL = "https://github.com/nathanokh1/Mediagator/releases"
 GITHUB_LATEST_API = "https://api.github.com/repos/nathanokh1/Mediagator/releases/latest"
 DONATE_URL = "https://buymeacoffee.com/nathanokh"  # update if you switch platforms
