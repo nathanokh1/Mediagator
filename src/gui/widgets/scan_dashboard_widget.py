@@ -358,15 +358,15 @@ def _build_stale(result: ScanResult, on_archive) -> QWidget:
 
     lay.addWidget(_section("Stale Data  (by last-modified date)"))
 
-        intro = QLabel(
-            "Files that haven't been modified in a long time are good candidates "
-            "for archiving to a cold-storage drive or deletion.  "
-            "Click <b>Archive →</b> to route those folders into a new transfer."
-        )
-        intro.setTextFormat(Qt.TextFormat.RichText)
-        intro.setWordWrap(True)
-        intro.setObjectName("hintLabel")
-        intro.setStyleSheet("font-size: 12px; margin-bottom: 6px;")
+    intro = QLabel(
+        "Files that haven't been modified in a long time are good candidates "
+        "for archiving to a cold-storage drive or deletion.  "
+        "Click <b>Archive →</b> to route those folders into a new transfer."
+    )
+    intro.setTextFormat(Qt.TextFormat.RichText)
+    intro.setWordWrap(True)
+    intro.setObjectName("hintLabel")
+    intro.setStyleSheet("font-size: 12px; margin-bottom: 6px;")
     lay.addWidget(intro)
 
     buckets = [
