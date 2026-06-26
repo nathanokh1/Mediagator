@@ -5,8 +5,8 @@
 #   .\build.ps1                          # standard build (folder bundle)
 #   .\build.ps1 -Clean                   # wipe dist/ and build/ first
 #   .\build.ps1 -Installer               # also compile Inno Setup installer
-#   .\build.ps1 -Installer -Release 1.0.7
-#       Bumps version to 1.0.7, builds installer, commits, tags, pushes to
+#   .\build.ps1 -Installer -Release 1.0.8
+#       Bumps version to 1.0.8, builds installer, commits, tags, pushes to
 #       GitHub, creates a GitHub Release, and uploads the installer as an asset.
 #       Requires: gh CLI (winget install GitHub.cli) authenticated with gh auth login
 #
@@ -16,7 +16,7 @@ param(
     [switch]$Clean     = $false,
     [switch]$Onefile   = $false,
     [switch]$Installer = $false,
-    [string]$Release   = ""        # pass a version string e.g. -Release 1.0.7
+    [string]$Release   = ""        # pass a version string e.g. -Release 1.0.8
 )
 
 Set-StrictMode -Version Latest
