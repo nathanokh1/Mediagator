@@ -17,7 +17,12 @@ from typing import Any
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from src.config.constants import DUPLICATE_FOLDER_NAME, MEDIA_EXTENSIONS, ConflictBehavior
+from src.config.constants import (
+    DUPLICATE_FOLDER_NAME,
+    MEDIA_EXTENSIONS,
+    ConflictBehavior,
+    DEFAULT_DELETE_DUPLICATES,
+)
 from src.core.duplicate_detector import is_duplicate
 from src.core.hardware_profile import HardwareProfile
 from src.models.folder_node import FolderNode, FolderStatus
@@ -258,6 +263,9 @@ class TransferWorker(QThread):
         done = self._stats.files_completed
 
         conflict_mode = self._settings.get("conflict_behavior", ConflictBehavior.RENAME)
+        delete_duplicates = self._settings.get(
+            "delete_duplicates", DEFAULT_DELETE_DUPLICATES
+        )
 
         # Duplicate check against existing destination
         if dest.exists():
@@ -271,24 +279,35 @@ class TransferWorker(QThread):
                 )
                 dup_dest.parent.mkdir(parents=True, exist_ok=True)
                 if safe_copy(src, dup_dest, buffer=self._copy_buffer):
-                    deleted = safe_delete(src)
-                    if not deleted:
+                    try:
+                        size = src.stat().st_size
+                    except OSError:
+                        size = 0
+                    if delete_duplicates:
+                        if safe_delete(src):
+                            log_result = "FLAGGED"
+                            log_detail = method
+                        else:
+                            ts = time.strftime("%H:%M:%S")
+                            self._stats.flagged_items.append(
+                                (ts, src, "DELETE_FAILED", "SOURCE_KEPT")
+                            )
+                            log_result = "COPY_OK_DELETE_FAILED"
+                            log_detail = "source may be read-only"
+                    else:
                         ts = time.strftime("%H:%M:%S")
                         self._stats.flagged_items.append(
-                            (ts, src, "DELETE_FAILED", "SOURCE_KEPT")
+                            (ts, src, "DUPLICATE_FLAGGED", "SOURCE_KEPT")
                         )
-                        log_operation(
-                            self._transfer_logger, logging.WARNING,
-                            "DUPLICATE", src, dup_dest, src.stat().st_size,
-                            "COPY_OK_DELETE_FAILED", "source may be read-only",
-                        )
+                        log_result = "FLAGGED"
+                        log_detail = f"{method}; source kept"
                     self._stats.duplicates.append(src)
                     self._stats.files_completed += 1
                     self._stats.files_remaining -= 1
                     log_operation(
                         self._transfer_logger, logging.WARNING,
-                        "DUPLICATE", src, dup_dest, src.stat().st_size,
-                        "FLAGGED", method,
+                        "DUPLICATE", src, dup_dest, size,
+                        log_result, log_detail,
                     )
                     self.item_completed.emit(str(src), str(dup_dest), "DUPLICATE")
                     self._emit_progress(src, dup_dest, start_time)

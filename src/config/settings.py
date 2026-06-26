@@ -11,7 +11,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.config.constants import APPDATA_DIR, SETTINGS_FILE, DEFAULT_EXCLUSIONS, DEFAULT_CONFLICT_BEHAVIOR
+from src.config.constants import (
+    APPDATA_DIR,
+    SETTINGS_FILE,
+    DEFAULT_EXCLUSIONS,
+    DEFAULT_CONFLICT_BEHAVIOR,
+    DEFAULT_DELETE_DUPLICATES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +37,7 @@ _DEFAULTS: dict[str, Any] = {
     "lightroom_report": False,
     "welcome_seen": False,              # show welcome screen until user checks "don't show again"
     "conflict_behavior": DEFAULT_CONFLICT_BEHAVIOR,  # rename | skip | overwrite
+    "delete_duplicates": DEFAULT_DELETE_DUPLICATES,  # remove source after duplicate flag
     "theme": "dark",                    # dark | light
     "profiles": {},                     # name → {source_folders, extensions, destination, org_mode}
 }

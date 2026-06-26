@@ -153,6 +153,11 @@ class ConflictBehavior:
 DEFAULT_CONFLICT_BEHAVIOR: str = ConflictBehavior.RENAME
 
 # ---------------------------------------------------------------------------
+# Duplicate handling — delete source after routing to _DUPLICATES_REVIEW
+# ---------------------------------------------------------------------------
+DEFAULT_DELETE_DUPLICATES: bool = False
+
+# ---------------------------------------------------------------------------
 # Default folder exclusions (case-insensitive match against folder name)
 # ---------------------------------------------------------------------------
 DEFAULT_EXCLUSIONS: set[str] = {

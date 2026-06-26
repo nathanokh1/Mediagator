@@ -17,7 +17,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from src.gui.wizard_state import WizardState
 from src.config.settings import save_settings
-from src.config.constants import ConflictBehavior
+from src.config.constants import ConflictBehavior, DEFAULT_DELETE_DUPLICATES
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +86,13 @@ class TransferSettingsStep(QWidget):
             conflict_layout.addWidget(btn)
             self._conflict_btn_group.addButton(btn)
         self._radio_rename.setChecked(True)
+        self._delete_duplicates_cb = QCheckBox("Delete duplicates")
+        self._delete_duplicates_cb.setChecked(DEFAULT_DELETE_DUPLICATES)
+        conflict_layout.addWidget(self._delete_duplicates_cb)
         conflict_note = QLabel(
-            "True duplicates (same name + date) are always flagged to "
-            "_DUPLICATES_REVIEW/ regardless of this setting."
+            "True duplicates (same name + date) are copied to "
+            "_DUPLICATES_REVIEW/ and flagged in the report. "
+            "Sources are only removed when Delete duplicates is checked."
         )
         conflict_note.setWordWrap(True)
         conflict_note.setObjectName("hintLabel")
@@ -260,6 +264,7 @@ class TransferSettingsStep(QWidget):
         s["email_recipient"] = self._smtp_recipient.text().strip()
         s["email_password"] = self._smtp_password.text()
         s["lightroom_report"] = self._lr_cb.isChecked()
+        s["delete_duplicates"] = self._delete_duplicates_cb.isChecked()
         save_settings(s)
         self.next_requested.emit()
 
@@ -321,4 +326,7 @@ class TransferSettingsStep(QWidget):
         self._smtp_recipient.setText(s.get("email_recipient", ""))
         self._smtp_password.setText(s.get("email_password", ""))
         self._lr_cb.setChecked(s.get("lightroom_report", False))
+        self._delete_duplicates_cb.setChecked(
+            s.get("delete_duplicates", DEFAULT_DELETE_DUPLICATES)
+        )
         self._toggle_email(self._email_cb.checkState().value)

@@ -89,9 +89,14 @@ def _build_html(state: WizardState) -> tuple[str, Path]:
     if stats and stats.duplicates:
         dup_lines = "".join(f"<li style='word-break:break-all'>{p}</li>" for p in stats.duplicates)
         dest_root = str(state.destination_root or "")
+        kept_note = (
+            " Source files were kept on the original drive."
+            if not state.settings.get("delete_duplicates", False)
+            else ""
+        )
         dup_html = (
-            f"<p>{len(stats.duplicates)} duplicate(s) routed to "
-            f"<code>{dest_root}/_DUPLICATES_REVIEW/</code></p>"
+            f"<p>{len(stats.duplicates)} duplicate(s) flagged and copied to "
+            f"<code>{dest_root}/_DUPLICATES_REVIEW/</code>.{kept_note}</p>"
             f"<ul>{dup_lines}</ul>"
         )
     else:
