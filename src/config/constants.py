@@ -45,7 +45,7 @@ ALL_EXTENSIONS: set[str] = (
 
 FILE_TYPE_GROUPS: list[dict] = [
     {
-        "name": "ðŸ“·  Photos",
+        "name": "\U0001f4f7  Photos",
         "id": "photos",
         "items": [
             {"label": "JPG / JPEG",       "exts": [".jpg", ".jpeg"],        "default": True},
@@ -57,7 +57,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "ðŸ“¸  RAW / Professional",
+        "name": "\U0001f4f8  RAW / Professional",
         "id": "raw",
         "items": [
             {"label": "RAW",               "exts": [".raw"],                "default": True},
@@ -69,7 +69,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "ðŸŽ¬  Videos",
+        "name": "\U0001f3ac  Videos",
         "id": "videos",
         "items": [
             {"label": "MP4",               "exts": [".mp4"],                "default": True},
@@ -82,7 +82,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "ðŸŽµ  Audio",
+        "name": "\U0001f3b5  Audio",
         "id": "audio",
         "items": [
             {"label": "MP3",               "exts": [".mp3"],                "default": False},
@@ -95,7 +95,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "ðŸŽ¨  Creative Files",
+        "name": "\U0001f3a8  Creative Files",
         "id": "creative",
         "items": [
             {"label": "PSD / PSB  (Photoshop)",   "exts": [".psd", ".psb"],         "default": False},
@@ -106,7 +106,7 @@ FILE_TYPE_GROUPS: list[dict] = [
         ],
     },
     {
-        "name": "ðŸ“„  Documents",
+        "name": "\U0001f4c4  Documents",
         "id": "documents",
         "items": [
             {"label": "PDF",               "exts": [".pdf"],                "default": False},
@@ -132,11 +132,11 @@ class OrgMode:
     FILE_DATE   = "file_date"    # dest/2024/06-June/filename.jpg (flatten & re-sort by individual EXIF)
 
 ORG_MODE_LABELS: dict[str, str] = {
-    OrgMode.YEAR_MONTH: "Year / Month      â€”  2024 â€º 06-June â€º Folder Name",
-    OrgMode.YEAR_ONLY:  "Year only         â€”  2024 â€º Folder Name",
-    OrgMode.EVENT_YEAR: "Event under Year  â€”  2024 â€º My Event Name  (keeps your folder names)",
-    OrgMode.FLAT:       "No reorganisation â€”  Folder Name  (copy as-is)",
-    OrgMode.FILE_DATE:  "Flatten by Date   â€”  2024 â€º 06-June â€º filename.jpg  (re-sorts individual files by EXIF)",
+    OrgMode.YEAR_MONTH: "Year / Month      \u2014  2024 \u203a 06-June \u203a Folder Name",
+    OrgMode.YEAR_ONLY:  "Year only         \u2014  2024 \u203a Folder Name",
+    OrgMode.EVENT_YEAR: "Event under Year  \u2014  2024 \u203a My Event Name  (keeps your folder names)",
+    OrgMode.FLAT:       "No reorganisation \u2014  Folder Name  (copy as-is)",
+    OrgMode.FILE_DATE:  "Flatten by Date   \u2014  2024 \u203a 06-June \u203a filename.jpg  (re-sorts individual files by EXIF)",
 }
 
 DEFAULT_ORG_MODE: str = OrgMode.YEAR_MONTH
