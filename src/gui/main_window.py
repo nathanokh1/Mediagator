@@ -124,6 +124,22 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(brand_widget)
         header_layout.addStretch()
 
+        # Manual update check
+        self._check_updates_btn = QPushButton("Check for Updates")
+        self._check_updates_btn.setFixedHeight(26)
+        self._check_updates_btn.setToolTip(
+            "Check GitHub for a newer Mediagator release"
+        )
+        self._check_updates_btn.setStyleSheet(
+            "QPushButton { background: transparent; border: 1px solid #555;"
+            " border-radius: 5px; color: #bbb; font-size: 11px;"
+            " padding: 0 10px; }"
+            "QPushButton:hover { border-color: #ff9800; color: #ff9800; }"
+            "QPushButton:disabled { color: #555; border-color: #333; }"
+        )
+        self._check_updates_btn.clicked.connect(self._check_for_updates_manual)
+        header_layout.addWidget(self._check_updates_btn)
+
         # Donate button
         donate_btn = QPushButton("♥  Support")
         donate_btn.setFixedHeight(26)
@@ -294,9 +310,64 @@ class MainWindow(QMainWindow):
 
     def _start_update_check(self) -> None:
         """Spawn a background thread to check GitHub for a newer release."""
-        self._update_checker = _UpdateChecker(APP_VERSION)
+        self._update_checker = _UpdateChecker(APP_VERSION, self)
         self._update_checker.update_available.connect(self._on_update_available)
         self._update_checker.start()
+
+    def _check_for_updates_manual(self) -> None:
+        """Check GitHub for updates and show the result to the user."""
+        if getattr(self, "_manual_update_checker", None) and self._manual_update_checker.isRunning():
+            return
+
+        self._check_updates_btn.setEnabled(False)
+        self._check_updates_btn.setText("Checking…")
+
+        checker = _UpdateChecker(APP_VERSION, self)
+        checker.update_available.connect(self._on_manual_update_available)
+        checker.up_to_date.connect(self._on_update_up_to_date)
+        checker.check_failed.connect(self._on_update_check_failed)
+        checker.finished.connect(self._reset_check_updates_btn)
+        self._manual_update_checker = checker
+        checker.start()
+
+    def _reset_check_updates_btn(self) -> None:
+        """Restore the manual update-check button after a check completes."""
+        self._check_updates_btn.setEnabled(True)
+        self._check_updates_btn.setText("Check for Updates")
+
+    def _on_manual_update_available(self, latest: str, download_url: str) -> None:
+        """Handle a newer release found during a manual update check."""
+        self._on_update_available(latest, download_url)
+        self._show_update_dialog(latest, download_url)
+
+    def _on_update_up_to_date(self) -> None:
+        """Tell the user they already have the latest release."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        QMessageBox.information(
+            self,
+            "Up to Date",
+            f"You already have the latest Mediagator release (v{APP_VERSION}).",
+        )
+
+    def _on_update_check_failed(self, error: str) -> None:
+        """Tell the user the update check could not reach GitHub."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Update Check Failed")
+        msg.setText("Could not check for updates right now.")
+        msg.setInformativeText(
+            f"{error}\n\nYou can download the latest installer from GitHub Releases."
+        )
+        open_releases = msg.addButton(
+            "Open Releases Page", QMessageBox.ButtonRole.ActionRole
+        )
+        msg.addButton(QMessageBox.StandardButton.Close)
+        msg.exec()
+        if msg.clickedButton() == open_releases:
+            webbrowser.open(GITHUB_RELEASES_URL)
 
     def _on_update_available(self, latest: str, download_url: str) -> None:
         """Show the update button (and store download URL) when newer version found."""
@@ -325,12 +396,15 @@ class MainWindow(QMainWindow):
 class _UpdateChecker(QThread):
     """Background thread that checks GitHub for a newer release.
 
-    Emits ``update_available(version, download_url)`` when a newer release
-    exists and has a matching ``.exe`` installer asset.  Runs once on startup
-    and silently swallows all network/parse errors.
+    Signals:
+        update_available: ``(version, download_url)`` when a newer release exists.
+        up_to_date: Emitted when the running version is already current.
+        check_failed: Emitted with an error message when the check cannot complete.
     """
 
     update_available = pyqtSignal(str, str)  # (version, download_url)
+    up_to_date = pyqtSignal()
+    check_failed = pyqtSignal(str)
 
     def __init__(self, current_version: str, parent=None) -> None:
         super().__init__(parent)
@@ -347,11 +421,16 @@ class _UpdateChecker(QThread):
                 GITHUB_LATEST_API,
                 headers={"User-Agent": "Mediagator-update-check"},
             )
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode())
 
             tag = data.get("tag_name", "").lstrip("v")
-            if not tag or not self._is_newer(tag):
+            if not tag:
+                self.check_failed.emit("GitHub did not return a release version.")
+                return
+
+            if not self._is_newer(tag):
+                self.up_to_date.emit()
                 return
 
             # Look for an installer asset (.exe) in the release assets
@@ -367,17 +446,16 @@ class _UpdateChecker(QThread):
                 download_url = GITHUB_RELEASES_URL
 
             self.update_available.emit(tag, download_url)
-        except Exception:
-            pass  # network unavailable, behind proxy, rate-limited — all fine
+        except Exception as exc:
+            logger.warning("Update check failed: %s", exc)
+            self.check_failed.emit(str(exc))
 
-    @staticmethod
-    def _is_newer(tag: str) -> bool:
+    def _is_newer(self, tag: str) -> bool:
         """Return True if *tag* is a higher semver than the running version."""
-        from src.config.constants import APP_VERSION
         try:
             def _parts(v: str) -> tuple[int, ...]:
                 return tuple(int(x) for x in v.split("."))
-            return _parts(tag) > _parts(APP_VERSION)
+            return _parts(tag) > _parts(self._current)
         except ValueError:
             return False
 
