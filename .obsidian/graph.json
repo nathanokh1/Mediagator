@@ -1,0 +1,34 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:memory/",
+      "color": { "a": 1, "rgb": 7929855 }
+    },
+    {
+      "query": "path:skills/",
+      "color": { "a": 1, "rgb": 4890623 }
+    },
+    {
+      "query": "path:docs/",
+      "color": { "a": 1, "rgb": 3394611 }
+    },
+    {
+      "query": "path:.cursor/",
+      "color": { "a": 1, "rgb": 12897484 }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": true,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.2,
+  "lineSizeMultiplier": 1,
+  "scale": 1,
+  "close": false
+}

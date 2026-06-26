@@ -1,0 +1,20 @@
+{
+  "defaultViewMode": "preview",
+  "foldHeading": false,
+  "showLineNumber": false,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "showFrontmatter": false,
+  "smartIndentList": true,
+  "spellcheck": false,
+  "theme": "moonstone",
+  "cssTheme": "",
+  "baseFontSize": 16,
+  "enabledPlugins": [
+    "kanban",
+    "dataview",
+    "templater-obsidian",
+    "obsidian-git",
+    "mermaid-tools"
+  ]
+}
